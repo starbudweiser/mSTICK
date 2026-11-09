@@ -15,6 +15,7 @@ let captures: [(String, @MainActor (AppDelegate, String) -> Void)] = [
     ("--capture-note", Capture.note), ("--capture-all", Capture.all),
     ("--capture-settings", { Capture.settings($0, $1, tab: 0) }),
     ("--capture-deck", { d, p in d.deck.capture(to: p) }),
+    ("--capture-deck-rest", { d, p in d.deck.capture(to: p, fanned: false) }),
     ("--capture-about", { _, p in Capture.about(p) }),
 ]
 if arguments.contains("--demo") { MainActor.assumeIsolated { Capture.seedIfEmpty(delegate.store) } }

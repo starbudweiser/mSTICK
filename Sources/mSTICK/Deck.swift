@@ -295,9 +295,9 @@ final class DeckController: NSObject {
 
     func fanForTesting() { for e in entries { e.model.fanned = true } }
 
-    func capture(to path: String) {
+    func capture(to path: String, fanned: Bool = true) {
         guard let e = entries.first else { return }
-        e.model.fanned = true
+        e.model.fanned = fanned
         resize(e.model, animated: false)
         let size = e.panel.frame.size
         e.host.frame = NSRect(origin: .zero, size: size)
@@ -359,14 +359,14 @@ private struct DeckCanvas: View {
     @ObservedObject var prefs: Prefs
     let actions: DeckActions
     let labelFlip: Bool
+    @State private var shown = false
     private typealias M = DeckMetrics
     /// Le premier de la liste reste en haut (colonne) ou à gauche (rangée), quel que soit le bord.
     private var ordered: [Note] { prefs.edge == .bottom || prefs.edge == .left ? model.notes.reversed() : model.notes }
 
     var body: some View {
-        ZStack(alignment: .trailing) {
-            rest.opacity(model.fanned ? 0 : 1).animation(.easeOut(duration: 0.12), value: model.fanned)
-            fan
+        Group {
+            if model.fanned { fan.onAppear { shown = true }.onDisappear { shown = false } } else { rest }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
     }
@@ -398,15 +398,15 @@ private struct DeckCanvas: View {
     // Survol : les cartes se posent en écailles, 45 ms entre deux, chacune avec son étiquette verticale.
     private var fan: some View {
         VStack(alignment: .trailing, spacing: -M.overlap) {
-            handle.fanItem(0, model.fanned).padding(.trailing, 22).padding(.bottom, M.overlap + 4)
+            handle.fanItem(0, shown).padding(.trailing, 22).padding(.bottom, M.overlap + 4)
             ForEach(Array(ordered.enumerated()), id: \.element.id) { i, n in
-                card(n, index: i).fanItem(i + 1, model.fanned).zIndex(Double(i))
+                card(n, index: i).fanItem(i + 1, shown).zIndex(Double(i))
             }
             if model.overflow > 0 {
                 Button(action: actions.all) {
                     Text(L("deck.more", model.overflow)).font(.system(size: 11, weight: .bold)).foregroundStyle(Color.white)
                         .frame(width: 34, height: 22).background(Capsule().fill(Color.black.opacity(0.55)))
-                }.buttonStyle(.plain).padding(.trailing, 22).padding(.top, M.overlap + 6).fanItem(model.notes.count + 1, model.fanned)
+                }.buttonStyle(.plain).padding(.trailing, 22).padding(.top, M.overlap + 6).fanItem(model.notes.count + 1, shown)
             }
             Button(action: actions.new) {
                 Image(systemName: "plus").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(white: 0.25))
@@ -414,7 +414,7 @@ private struct DeckCanvas: View {
                     .shadow(color: .black.opacity(0.25), radius: 3, y: 1)
             }
             .buttonStyle(.plain).help(L("deck.new")).padding(.trailing, 22).padding(.top, M.overlap + 10)
-            .fanItem(model.notes.count + 2, model.fanned)
+            .fanItem(model.notes.count + 2, shown)
         }
         .padding(.vertical, 10)
     }
