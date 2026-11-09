@@ -1,4 +1,6 @@
 import AppKit
+import SwiftUI
+import CryptoKit
 import mSTICKCore
 
 /// `mSTICK --selftest` : vérifie l'éditeur (listes, mise en forme) sans ouvrir de fenêtre. Code de sortie 1 en cas d'échec.

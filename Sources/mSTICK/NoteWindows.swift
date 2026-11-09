@@ -117,7 +117,7 @@ final class NoteWindows: NSObject, NSWindowDelegate {
         let list = store.active
         guard let i = list.firstIndex(where: { $0.id == id }), !list.isEmpty else { return }
         let next = list[(i + step + list.count) % list.count].id
-        if let from = panels[id] { UserDefaults.standard.set(NSStringFromRect(from.frame), forKey: "frame." + next.uuidString) }
+        if let from = panels[id] { UserDefaults.standard.set(NSStringFromRect(from.frame), forKey: "frame." + next.uuidString); UserDefaults.standard.set(deckSignature, forKey: "sig." + next.uuidString) }
         open(next)
         close(id, deleteIfEmpty: false)
     }
@@ -129,7 +129,7 @@ final class NoteWindows: NSObject, NSWindowDelegate {
         guard !gone.isEmpty else { return }
         Toast.show(L("toast.deleted"), action: L("toast.undo")) { [weak self] in
             self?.store.restore(gone)
-            if let frame { self?.defaults.set(NSStringFromRect(frame), forKey: "frame." + id.uuidString) }
+            if let frame { self?.defaults.set(NSStringFromRect(frame), forKey: "frame." + id.uuidString); self?.defaults.set(self?.deckSignature, forKey: "sig." + id.uuidString) }
             self?.open(id)
         }
     }
@@ -165,39 +165,60 @@ final class NoteWindows: NSObject, NSWindowDelegate {
 
     // MARK: Emplacement
 
+    /// Où est le deck : bord + écran. Une note n'est replacée à sa dernière position que si le deck n'a pas bougé depuis.
+    private var deckSignature: String {
+        guard let anchor = deckAnchor?(), let screen = NSScreen.screens.first(where: { $0.frame.intersects(anchor.frame) }) else { return "?" }
+        return "\(anchor.edge.rawValue)/\(screen.displayID)"
+    }
+
+    /// Emplacement d'une note : à côté du deck (à la hauteur de la languette cliquée), sur l'écran et le bord du deck.
+    /// La position choisie à la main n'est reprise que si on ouvre la note sans passer par le deck et que le deck n'a pas bougé.
     private func place(_ id: UUID, tabFrame: NSRect?) -> NSRect {
-        let size = NSSize(width: 340, height: 240)
+        var size = NSSize(width: 340, height: 240)
         if let saved = defaults.string(forKey: "frame." + id.uuidString) {
             let r = NSRectFromString(saved)
-            if r.width > 100, NSScreen.screens.contains(where: { $0.visibleFrame.intersects(r) }) { return r }
-        }
-        if let last = defaults.string(forKey: "lastFrame") { // une nouvelle note s'ouvre là où la dernière a été posée
-            let r = NSRectFromString(last)
-            if r.width > 100, NSScreen.screens.contains(where: { $0.visibleFrame.intersects(r) }) {
-                return NSRect(x: r.origin.x + 24 * CGFloat(panels.count % 4), y: r.origin.y - 24 * CGFloat(panels.count % 4), width: r.width, height: r.height)
+            if r.width > 100 {
+                size = r.size
+                if tabFrame == nil, defaults.string(forKey: "sig." + id.uuidString) == deckSignature,
+                   NSScreen.screens.contains(where: { $0.visibleFrame.intersects(r) }) { return r }
             }
         }
-        guard let anchor = deckAnchor?(), let screen = NSScreen.screens.first(where: { $0.frame.intersects(anchor.frame) }) ?? NSScreen.main else {
+        return nextToDeck(size: size, along: tabFrame)
+    }
+
+    private func nextToDeck(size: NSSize, along point: NSRect?) -> NSRect {
+        guard let anchor = deckAnchor?(), let screen = NSScreen.screens.first(where: { $0.frame.intersects(anchor.frame) }) ?? NSScreen.screens.first else {
             let vf = NSScreen.main?.visibleFrame ?? NSRect(x: 100, y: 100, width: 800, height: 600)
-            return NSRect(x: vf.midX - 150, y: vf.midY - 150, width: size.width, height: size.height)
+            return NSRect(x: vf.midX - size.width / 2, y: vf.midY - size.height / 2, width: size.width, height: size.height)
         }
-        let vf = screen.visibleFrame
+        let vf = screen.visibleFrame, sf = screen.frame
+        let inset = DeckMetrics.fanThickness + 6
         var origin: NSPoint
         switch anchor.edge {
-        case .right: origin = NSPoint(x: anchor.frame.minX - size.width - 14, y: (tabFrame?.midY ?? anchor.frame.midY) - size.height / 2)
-        case .left: origin = NSPoint(x: anchor.frame.maxX + 14, y: (tabFrame?.midY ?? anchor.frame.midY) - size.height / 2)
-        case .bottom: origin = NSPoint(x: (tabFrame?.midX ?? anchor.frame.midX) - size.width / 2, y: anchor.frame.maxY + 14)
-        case .top: origin = NSPoint(x: (tabFrame?.midX ?? anchor.frame.midX) - size.width / 2, y: anchor.frame.minY - size.height - 14)
+        case .right: origin = NSPoint(x: sf.maxX - inset - size.width, y: (point?.midY ?? anchor.frame.midY) - size.height / 2)
+        case .left: origin = NSPoint(x: sf.minX + inset, y: (point?.midY ?? anchor.frame.midY) - size.height / 2)
+        case .bottom: origin = NSPoint(x: (point?.midX ?? anchor.frame.midX) - size.width / 2, y: vf.minY + inset)
+        case .top: origin = NSPoint(x: (point?.midX ?? anchor.frame.midX) - size.width / 2, y: vf.maxY - inset - size.height)
         }
         origin.x = min(max(origin.x, vf.minX + 8), vf.maxX - size.width - 8)
         origin.y = min(max(origin.y, vf.minY + 8), vf.maxY - size.height - 8)
         return NSRect(origin: origin, size: size)
     }
 
+    /// Le deck a changé de bord ou d'écran : les notes ouvertes le suivent, avec une étiquette du bon côté.
+    func followDeck() {
+        for (id, panel) in panels {
+            let target = nextToDeck(size: panel.frame.size, along: nil)
+            panel.setFrame(target, display: true, animate: true)
+            defaults.set(NSStringFromRect(target), forKey: "frame." + id.uuidString)
+            defaults.set(deckSignature, forKey: "sig." + id.uuidString)
+        }
+    }
+
     private func remember(_ window: NSWindow?) {
         guard let panel = window as? NotePanel, let id = panels.first(where: { $0.value === panel })?.key else { return }
         defaults.set(NSStringFromRect(panel.frame), forKey: "frame." + id.uuidString)
-        defaults.set(NSStringFromRect(panel.frame), forKey: "lastFrame")
+        defaults.set(deckSignature, forKey: "sig." + id.uuidString)
     }
 
     func windowDidMove(_ notification: Notification) { remember(notification.object as? NSWindow) }

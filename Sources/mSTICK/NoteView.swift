@@ -78,6 +78,7 @@ struct NoteView: View {
                     }
             }
         }
+        .windowDrag()
     }
 
     private var titleBar: some View {
@@ -114,6 +115,7 @@ struct NoteView: View {
             .opacity(chromeVisible || note.pinned ? 1 : 0)
         }
         .padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 4)
+        .background(WindowDragArea())
     }
 
     private var toolbar: some View {
@@ -137,6 +139,7 @@ struct NoteView: View {
             Spacer()
         }
         .padding(.horizontal, 8).padding(.vertical, 5)
+        .background(WindowDragArea())
     }
 
     private func formatButton(_ symbol: String, _ help: String, _ action: @escaping () -> Void) -> some View {
@@ -199,4 +202,33 @@ private struct StripLine: Shape {
             else { p.move(to: CGPoint(x: rect.minX, y: rect.midY)); p.addLine(to: CGPoint(x: rect.maxX, y: rect.midY)) }
         }
     }
+}
+
+
+/// Déplace la fenêtre quand on tire la vue. Une fenêtre sans barre de titre ne se déplace pas toute seule sous SwiftUI
+/// (ni `isMovableByWindowBackground` ni une vue AppKit en fond ne reçoivent le glissement) : on suit donc la souris à la main.
+struct WindowDrag: ViewModifier {
+    @State private var start: (mouse: NSPoint, origin: NSPoint, window: NSWindow)?
+
+    func body(content: Content) -> some View {
+        content.contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 1, coordinateSpace: .global)
+                .onChanged { _ in
+                    let mouse = NSEvent.mouseLocation
+                    if start == nil {
+                        guard let w = NSApp.windows.first(where: { $0 is NotePanel && $0.frame.contains(mouse) }) else { return }
+                        start = (mouse, w.frame.origin, w)
+                    }
+                    guard let s = start else { return }
+                    s.window.setFrameOrigin(NSPoint(x: s.origin.x + mouse.x - s.mouse.x, y: s.origin.y + mouse.y - s.mouse.y))
+                }
+                .onEnded { _ in start = nil })
+    }
+}
+
+extension View { func windowDrag() -> some View { modifier(WindowDrag()) } }
+
+/// Fond qui déplace la fenêtre (espaces vides d'une barre).
+struct WindowDragArea: View {
+    var body: some View { Color.clear.windowDrag() }
 }

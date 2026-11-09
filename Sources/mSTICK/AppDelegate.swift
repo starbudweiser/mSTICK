@@ -89,10 +89,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         store.syncFolder = prefs.syncEnabled && !prefs.syncPath.isEmpty ? URL(fileURLWithPath: prefs.syncPath) : nil
         store.markdownFolder = prefs.markdownEnabled && !prefs.markdownPath.isEmpty ? URL(fileURLWithPath: prefs.markdownPath) : nil
         if deckScreensChanged() { deck.rebuild() }
+        let place = "\(prefs.edge.rawValue)/\(prefs.screenChoice)"
+        if place != lastPlace { if lastPlace != nil { DispatchQueue.main.async { MainActor.assumeIsolated { self.notes.followDeck() } } }; lastPlace = place }
         bindHotkeys()
         installStatusItem()
     }
 
+    private var lastPlace: String?
     private var lastScreenChoice: String?
     private func deckScreensChanged() -> Bool {
         defer { lastScreenChoice = prefs.screenChoice }
