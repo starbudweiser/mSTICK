@@ -169,6 +169,7 @@ final class NoteWindows: NSObject, NSWindowDelegate {
         case .right: origin = NSPoint(x: anchor.frame.minX - size.width - 14, y: (tabFrame?.midY ?? anchor.frame.midY) - size.height / 2)
         case .left: origin = NSPoint(x: anchor.frame.maxX + 14, y: (tabFrame?.midY ?? anchor.frame.midY) - size.height / 2)
         case .bottom: origin = NSPoint(x: (tabFrame?.midX ?? anchor.frame.midX) - size.width / 2, y: anchor.frame.maxY + 14)
+        case .top: origin = NSPoint(x: (tabFrame?.midX ?? anchor.frame.midX) - size.width / 2, y: anchor.frame.minY - size.height - 14)
         }
         origin.x = min(max(origin.x, vf.minX + 8), vf.maxX - size.width - 8)
         origin.y = min(max(origin.y, vf.minY + 8), vf.maxY - size.height - 8)

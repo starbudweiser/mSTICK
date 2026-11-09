@@ -10,7 +10,7 @@ Sticky notes tucked at the edge of your screen, encrypted and always within reac
 
 ## Features
 
-- **The deck**: all your notes live in a stack on the screen edge (right, left or bottom). At rest, only thin stripes show; move the pointer over them and the notes fan out, one tab per note with its vertical title. Click a tab to open the note.
+- **The deck**: all your notes live in a stack on the screen edge (top, bottom, left or right, on the screen of your choice). At rest, only thin stripes show; move the pointer over them and the notes fan out, one tab per note with its vertical title. Click a tab to open the note.
 - **Floating notes**: title, emoji, five pastel colors plus your own, a font per note, pin, Markdown (bold, italic, underline, strikethrough, headings, bullets, numbered lists, checkboxes, links, tables) styled live as you type.
 - **Archive and search**: archive instead of deleting, search titles and text, multi-select, delete with a 10-second undo.
 - **Export and import**: Markdown or plain text (one file per note), a single file, or a re-importable `.stickies` archive. Optional Markdown folder (for example an Obsidian vault) kept in sync.

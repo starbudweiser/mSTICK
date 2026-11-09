@@ -74,7 +74,12 @@ final class DeckController: NSObject {
     func rebuild() {
         for e in entries { e.panel.orderOut(nil) }
         entries = []
-        let screens = prefs.screens == .all ? NSScreen.screens : [NSScreen.screens.first].compactMap { $0 }
+        let screens: [NSScreen]
+        switch prefs.screenChoice {
+        case "all": screens = NSScreen.screens
+        case "main": screens = [NSScreen.primary].compactMap { $0 }
+        default: screens = [NSScreen.screens.first { String($0.displayID) == prefs.screenChoice } ?? NSScreen.primary].compactMap { $0 }
+        }
         for screen in screens { entries.append(makeEntry(screen)) }
         refresh()
         if !hidden { entries.forEach { $0.panel.orderFrontRegardless() } }
@@ -94,7 +99,7 @@ final class DeckController: NSObject {
             self.schedule(model, fan: true, after: self.prefs.activationDelay)
         }
         host.onExit = { [weak self, weak model] in
-            guard let self, let model else { return }
+            guard let self, let model, NSEvent.pressedMouseButtons == 0 else { return } // pas pendant un glissement de la poignée
             self.schedule(model, fan: false, after: 0.3)
         }
         host.onClick = { [weak self, weak model] in
@@ -137,11 +142,12 @@ final class DeckController: NSObject {
             dropEdge: { [weak self] point in self?.snapEdge(to: point) })
     }
 
-    /// Poignée glissée : le deck va au bord le plus proche du point lâché.
+    /// Poignée glissée : le deck va sur l'écran où elle est lâchée, au bord de cet écran le plus proche.
     private func snapEdge(to point: NSPoint) {
-        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }) ?? NSScreen.main else { return }
+        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }) ?? NSScreen.primary else { return }
         let f = screen.frame
-        let distances: [(DeckEdge, CGFloat)] = [(.right, f.maxX - point.x), (.left, point.x - f.minX), (.bottom, point.y - f.minY)]
+        let distances: [(DeckEdge, CGFloat)] = [(.right, f.maxX - point.x), (.left, point.x - f.minX), (.bottom, point.y - f.minY), (.top, f.maxY - point.y)]
+        if prefs.screenChoice != "all" { prefs.screenChoice = screen == NSScreen.primary ? "main" : String(screen.displayID) }
         if let best = distances.min(by: { $0.1 < $1.1 }) { prefs.edge = best.0 }
     }
 
@@ -172,12 +178,13 @@ final class DeckController: NSObject {
         let thick = fanned ? M.fanThickness : M.restThickness
         let fanLen = CGFloat(count) * (M.tabLength + M.gap) + M.plus * 2 + M.gap * 2 + 16
         let restLen = max(44, CGFloat(count) * (M.stripeLength + M.stripeGap) + 18)
-        let maxLen = (prefs.edge == .bottom ? vf.width : vf.height) - 40
+        let maxLen = (prefs.edge.isVertical ? vf.height : vf.width) - 40
         let len = min(fanned ? fanLen : restLen, maxLen)
         switch prefs.edge {
         case .right: return NSRect(x: sf.maxX - thick, y: vf.midY - len / 2, width: thick, height: len)
         case .left: return NSRect(x: sf.minX, y: vf.midY - len / 2, width: thick, height: len)
         case .bottom: return NSRect(x: vf.midX - len / 2, y: vf.minY, width: len, height: thick)
+        case .top: return NSRect(x: vf.midX - len / 2, y: vf.maxY - thick, width: len, height: thick)
         }
     }
 
@@ -241,10 +248,10 @@ struct DeckView: View {
     let actions: DeckActions
 
     private typealias M = DeckMetrics
-    private var vertical: Bool { prefs.edge != .bottom }
-    private var alignment: Alignment { switch prefs.edge { case .right: return .trailing; case .left: return .leading; case .bottom: return .bottom } }
+    private var vertical: Bool { prefs.edge.isVertical }
+    private var alignment: Alignment { switch prefs.edge { case .right: return .trailing; case .left: return .leading; case .bottom: return .bottom; case .top: return .top } }
     private var hiddenOffset: CGSize {
-        switch prefs.edge { case .right: return CGSize(width: 44, height: 0); case .left: return CGSize(width: -44, height: 0); case .bottom: return CGSize(width: 0, height: 44) }
+        switch prefs.edge { case .right: return CGSize(width: 44, height: 0); case .left: return CGSize(width: -44, height: 0); case .bottom: return CGSize(width: 0, height: 44); case .top: return CGSize(width: 0, height: -44) }
     }
     private var layout: AnyLayout { vertical ? AnyLayout(VStackLayout(spacing: M.gap)) : AnyLayout(HStackLayout(spacing: M.gap)) }
     private var restLayout: AnyLayout { vertical ? AnyLayout(VStackLayout(spacing: M.stripeGap)) : AnyLayout(HStackLayout(spacing: M.stripeGap)) }
@@ -284,7 +291,7 @@ struct DeckView: View {
             }
         }
         .padding(vertical ? .vertical : .horizontal, 8)
-        .padding(prefs.edge == .right ? .trailing : prefs.edge == .left ? .leading : .bottom, 2)
+        .padding(prefs.edge == .right ? .trailing : prefs.edge == .left ? .leading : prefs.edge == .bottom ? .bottom : .top, 2)
         .allowsHitTesting(false)
     }
 

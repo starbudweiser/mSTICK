@@ -42,7 +42,7 @@ struct SettingsView: View {
             section("settings.deck") {
                 row("settings.edge") { Picker("", selection: $prefs.edge) { ForEach(DeckEdge.allCases, id: \.self) { Text(L("edge." + $0.rawValue)).tag($0) } }.labelsHidden().frame(width: 180) }
                 row("settings.dockstyle") { Picker("", selection: $prefs.dockStyle) { ForEach(DockStyle.allCases, id: \.self) { Text(L("dock." + $0.rawValue)).tag($0) } }.labelsHidden().frame(width: 180) }
-                row("settings.screens") { Picker("", selection: $prefs.screens) { ForEach(ScreenMode.allCases, id: \.self) { Text(L("screens." + $0.rawValue)).tag($0) } }.labelsHidden().frame(width: 180) }
+                row("settings.screens") { Picker("", selection: $prefs.screenChoice) { ForEach(screenOptions, id: \.id) { Text($0.title).tag($0.id) } }.labelsHidden().frame(width: 220) }
                 toggle("settings.keepopen", $prefs.keepOpen)
                 toggle("settings.fanonclick", $prefs.fanOnClick)
                 toggle("settings.fullscreen", $prefs.showOverFullScreen)
@@ -74,6 +74,15 @@ struct SettingsView: View {
                 Toggle(L("settings.login"), isOn: Binding(get: { startAtLogin }, set: setLogin)).toggleStyle(.checkbox).socle(Socle.T.body)
             }
         }
+    }
+
+    /// Écran principal, chaque autre écran branché (par son nom), ou tous.
+    private var screenOptions: [(id: String, title: String)] {
+        var list: [(id: String, title: String)] = [("main", L("screens.main"))]
+        for screen in NSScreen.screens.dropFirst() { list.append((String(screen.displayID), L("screens.secondary", screen.localizedName))) }
+        if NSScreen.screens.count > 1 { list.append(("all", L("screens.all"))) }
+        if !list.contains(where: { $0.id == prefs.screenChoice }) { list.append((prefs.screenChoice, L("screens.missing"))) }
+        return list
     }
 
     private func hexString(_ color: Color) -> String? {

@@ -92,10 +92,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installStatusItem()
     }
 
-    private var lastScreenMode: ScreenMode?
+    private var lastScreenChoice: String?
     private func deckScreensChanged() -> Bool {
-        defer { lastScreenMode = prefs.screens }
-        return lastScreenMode != prefs.screens
+        defer { lastScreenChoice = prefs.screenChoice }
+        return lastScreenChoice != prefs.screenChoice
     }
 
     private func bindHotkeys() {
@@ -182,6 +182,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         add(L("menu.all"), #selector(menuAll), key: .allNotes)
         add(L("menu.archive"), #selector(menuArchive), key: .archive)
         menu.addItem(.separator())
+        let place = NSMenuItem(title: L("menu.place"), action: nil, keyEquivalent: "")
+        place.submenu = placeMenu()
+        menu.addItem(place)
         add(L("menu.movedeck"), #selector(menuMove), key: .moveDeck)
         add(L("menu.hide"), #selector(menuHide), key: .hideAll)
         menu.addItem(.separator())
@@ -199,6 +202,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return menu
     }
 
+    /// « Placer le deck » : le bord (haut, bas, gauche, droite) puis l'écran (principal, secondaire, tous).
+    private func placeMenu() -> NSMenu {
+        let sub = NSMenu()
+        for edge in [DeckEdge.top, .bottom, .left, .right] {
+            let item = NSMenuItem(title: L("edge." + edge.rawValue), action: #selector(menuEdge(_:)), keyEquivalent: "")
+            item.target = self; item.representedObject = edge.rawValue
+            item.state = prefs.edge == edge ? .on : .off
+            sub.addItem(item)
+        }
+        sub.addItem(.separator())
+        var choices: [(String, String)] = [("main", L("screens.main"))]
+        for s in NSScreen.screens.dropFirst() { choices.append((String(s.displayID), L("screens.secondary", s.localizedName))) }
+        if NSScreen.screens.count > 1 { choices.append(("all", L("screens.all"))) }
+        for (id, title) in choices {
+            let item = NSMenuItem(title: title, action: #selector(menuScreen(_:)), keyEquivalent: "")
+            item.target = self; item.representedObject = id
+            item.state = prefs.screenChoice == id ? .on : .off
+            sub.addItem(item)
+        }
+        return sub
+    }
+
+    @objc private func menuEdge(_ sender: NSMenuItem) { if let raw = sender.representedObject as? String, let e = DeckEdge(rawValue: raw) { prefs.edge = e } }
+    @objc private func menuScreen(_ sender: NSMenuItem) { if let id = sender.representedObject as? String { prefs.screenChoice = id } }
     @objc private func menuNew() { newNote() }
     @objc private func menuAll() { showAll(.all) }
     @objc private func menuArchive() { showAll(.archived) }

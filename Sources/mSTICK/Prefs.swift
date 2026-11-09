@@ -7,7 +7,12 @@ extension Notification.Name {
 }
 
 enum DockStyle: String, CaseIterable { case stripes, dots, pile }
-enum ScreenMode: String, CaseIterable { case main, all }
+
+/// Écran du deck : « main » (celui de la barre des menus), « all », ou l'identifiant d'un écran précis.
+extension NSScreen {
+    var displayID: CGDirectDisplayID { (deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value ?? 0 }
+    static var primary: NSScreen? { NSScreen.screens.first }
+}
 
 /// Marque : couleur du logo, utilisée pour la lettre « m » du nom de l'appli.
 enum BrandColor {
@@ -26,7 +31,7 @@ final class Prefs: ObservableObject {
     @Published var dockStyle: DockStyle { didSet { d.set(dockStyle.rawValue, forKey: "dockStyle"); changed() } }
     @Published var keepOpen: Bool { didSet { d.set(keepOpen, forKey: "keepOpen"); changed() } }
     @Published var fanOnClick: Bool { didSet { d.set(fanOnClick, forKey: "fanOnClick"); changed() } }
-    @Published var screens: ScreenMode { didSet { d.set(screens.rawValue, forKey: "screens"); changed() } }
+    @Published var screenChoice: String { didSet { d.set(screenChoice, forKey: "screens"); changed() } }
     @Published var fontSize: Int { didSet { d.set(fontSize, forKey: "fontSize"); changed() } }
     @Published var activationDelay: Double { didSet { d.set(activationDelay, forKey: "activationDelay"); changed() } }
     @Published var showOverFullScreen: Bool { didSet { d.set(showOverFullScreen, forKey: "showOverFullScreen"); changed() } }
@@ -50,7 +55,7 @@ final class Prefs: ObservableObject {
         dockStyle = DockStyle(rawValue: d.string(forKey: "dockStyle") ?? "") ?? .stripes
         keepOpen = bool("keepOpen", false)
         fanOnClick = bool("fanOnClick", false)
-        screens = ScreenMode(rawValue: d.string(forKey: "screens") ?? "") ?? .main
+        screenChoice = d.string(forKey: "screens") ?? "main"
         fontSize = d.object(forKey: "fontSize") as? Int ?? 14
         activationDelay = d.object(forKey: "activationDelay") as? Double ?? 0.05
         showOverFullScreen = bool("showOverFullScreen", true)

@@ -37,6 +37,7 @@
 "edge.bottom" = "In basso";
 "edge.left" = "Bordo sinistro";
 "edge.right" = "Bordo destro";
+"edge.top" = "In alto";
 "export.archive" = "Archivio .stickies (reimportabile)";
 "export.markdown" = "Markdown (un .md per nota)";
 "export.single" = "File unico (tutte le note)";
@@ -61,6 +62,7 @@
 "menu.hide" = "Nascondi deck e note";
 "menu.movedeck" = "Sposta il deck";
 "menu.new" = "Nuova nota";
+"menu.place" = "Posiziona il deck";
 "menu.quit" = "Esci da mSTICK";
 "menu.settings" = "Impostazioni…";
 "note.archive" = "Archivia";
@@ -80,6 +82,8 @@
 "note.untitled" = "Senza titolo";
 "screens.all" = "Tutti gli schermi";
 "screens.main" = "Schermo principale";
+"screens.missing" = "Schermo scollegato (torna al principale)";
+"screens.secondary" = "Schermo secondario: %@";
 "settings.autohide" = "Nascondi la barra degli strumenti";
 "settings.autoupdate" = "Installa automaticamente gli aggiornamenti";
 "settings.colors" = "Colori personalizzati";

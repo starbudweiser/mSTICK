@@ -89,8 +89,10 @@ public enum HotkeyAction: String, CaseIterable, Codable, Sendable {
 }
 
 public enum DeckEdge: String, CaseIterable, Codable, Sendable {
-    case right, left, bottom
+    case right, left, bottom, top
     public var next: DeckEdge {
-        switch self { case .right: return .left; case .left: return .bottom; case .bottom: return .right }
+        switch self { case .right: return .bottom; case .bottom: return .left; case .left: return .top; case .top: return .right }
     }
+    /// Le deck est une colonne (bord gauche ou droit) ; sinon une rangée.
+    public var isVertical: Bool { self == .left || self == .right }
 }
