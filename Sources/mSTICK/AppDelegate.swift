@@ -57,9 +57,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if args.contains("--discret-toutes") { showAll(.all, quietly: true) }
         if args.contains("--discret-reglages") { settings.show(store: store, quietly: true) }
         if args.contains("--deck-ouvert") { deck.fanForTesting() }
+        if args.contains("--demo-notes") { demoNotes() }
     }
 
     private var cancellables = Set<AnyCancellable>()
+
+    /// Démo : ouvre toutes les notes en cascade près du deck, sans prendre le focus.
+    private func demoNotes() {
+        guard let screen = NSScreen.screens.first else { return }
+        let vf = screen.visibleFrame
+        for (i, n) in store.active.enumerated() {
+            let x = vf.maxX - 70 - 320 - CGFloat(i) * 120
+            let y = vf.midY - 160 + CGFloat(i % 2 == 0 ? 60 : -60) - CGFloat(i) * 6
+            notes.open(n.id, quietly: true, frame: NSRect(x: max(vf.minX + 20, x), y: y, width: 320, height: 330))
+        }
+        deck.fanForTesting()
+    }
 
     func applicationWillTerminate(_ notification: Notification) { store.flush() }
 

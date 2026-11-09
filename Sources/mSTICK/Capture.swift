@@ -12,7 +12,7 @@ enum Capture {
             ("Bureau", "💼", "blue", "1. Relire le devis\n2. Envoyer la *facture*\n3. <u>Sauvegarder</u> `projet`"),
             ("Idées", "💡", "green", "Une app qui **vit** au bord de l'écran."),
             ("Perso", "", "pink", "Anniversaire de Marie le 14."),
-            ("Projets", "🚀", "purple", "[lien](https://example.com)"),
+            ("Projets", "🚀", "purple", "## À lancer\n- [ ] page d'accueil\n- [x] logo\n\nVoir [la doc](https://example.com) et noter `swift build`."),
         ]
         for (i, s) in samples.enumerated() {
             let n = store.create(color: s.2)

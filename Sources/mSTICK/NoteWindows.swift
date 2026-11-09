@@ -32,7 +32,7 @@ final class NoteWindows: NSObject, NSWindowDelegate {
 
     // MARK: Ouverture
 
-    func open(_ id: UUID, tabFrame: NSRect? = nil, quietly: Bool = false) {
+    func open(_ id: UUID, tabFrame: NSRect? = nil, quietly: Bool = false, frame: NSRect? = nil) {
         if let existing = panels[id] { reveal(existing, quietly: quietly); return }
         guard store.note(id) != nil else { return }
         let vm = NoteViewModel(id: id, store: store)
@@ -42,7 +42,7 @@ final class NoteWindows: NSObject, NSWindowDelegate {
         host.wantsLayer = true
         host.layer?.cornerRadius = 10
         host.layer?.masksToBounds = true
-        let panel = NotePanel(contentRect: place(id, tabFrame: tabFrame), styleMask: [.borderless, .resizable],
+        let panel = NotePanel(contentRect: frame ?? place(id, tabFrame: tabFrame), styleMask: [.borderless, .resizable],
                               backing: .buffered, defer: false)
         panel.contentView = host
         panel.isOpaque = false
@@ -50,6 +50,7 @@ final class NoteWindows: NSObject, NSWindowDelegate {
         panel.hasShadow = true
         panel.isMovableByWindowBackground = true
         panel.isReleasedWhenClosed = false
+        panel.hidesOnDeactivate = false // un panneau se masque sinon dès que l'appli (sans Dock) n'est plus active
         panel.minSize = NSSize(width: 220, height: 150)
         panel.collectionBehavior = Prefs.shared.showOverFullScreen ? [.canJoinAllSpaces, .fullScreenAuxiliary] : [.moveToActiveSpace]
         panel.delegate = self
