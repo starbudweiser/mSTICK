@@ -12,10 +12,15 @@ final class DeckModel: ObservableObject {
     let maxVisible = 8
 }
 
-private enum DeckMetrics {
-    static let tab: CGFloat = 34, tabLength: CGFloat = 100, gap: CGFloat = 6, plus: CGFloat = 30
-    static let stripe: CGFloat = 10, stripeLength: CGFloat = 22, stripeGap: CGFloat = 4
-    static let restThickness: CGFloat = 14, fanThickness: CGFloat = 48
+/// Mesures du deck, dessiné comme sur le bord droit puis tourné pour les autres bords.
+enum DeckMetrics {
+    static let cardLength: CGFloat = 96, overlap: CGFloat = 12, baseWidth: CGFloat = 46, stair: CGFloat = 3, hidden: CGFloat = 24
+    static let restThickness: CGFloat = 16, fanThickness: CGFloat = 84
+    static let dash: CGFloat = 16, dashGap: CGFloat = 6
+    static let gripHeight: CGFloat = 16, plus: CGFloat = 26
+
+    static func fanLength(count: Int) -> CGFloat { CGFloat(count) * (cardLength - overlap) + overlap + gripHeight + plus + 36 }
+    static func restLength(count: Int) -> CGFloat { max(40, CGFloat(max(count, 1)) * (dash + dashGap) + 16) }
 }
 
 final class DeckPanel: NSPanel {
@@ -39,7 +44,81 @@ final class DeckHostView: NSHostingView<DeckView> {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
-/// Le deck sur le bord de l'écran : repos (fines languettes), survol (notes en éventail), ouverture (fenêtre de la note).
+// MARK: - Déplacement du deck : la cible (écran + bord) s'affiche en direct
+
+/// Écran le plus proche d'un point (bords compris) et bord de cet écran le plus proche.
+@MainActor
+enum DeckTarget {
+    static func resolve(_ point: NSPoint) -> (screen: NSScreen, edge: DeckEdge)? {
+        func distance(_ r: NSRect) -> CGFloat {
+            let dx = max(r.minX - point.x, 0, point.x - r.maxX), dy = max(r.minY - point.y, 0, point.y - r.maxY)
+            return hypot(dx, dy)
+        }
+        // L'écran qui contient le point (la frontière appartient à l'écran de droite), sinon le plus proche.
+        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }) ?? NSScreen.screens.min(by: { distance($0.frame) < distance($1.frame) }) else { return nil }
+        let f = screen.frame
+        let edges: [(DeckEdge, CGFloat)] = [(.right, abs(f.maxX - point.x)), (.left, abs(point.x - f.minX)), (.bottom, abs(point.y - f.minY)), (.top, abs(f.maxY - point.y))]
+        return (screen, edges.min(by: { $0.1 < $1.1 })!.0)
+    }
+}
+
+@MainActor
+final class ZonesModel: ObservableObject {
+    @Published var target: DeckEdge?
+}
+
+private struct ZonesView: View {
+    @ObservedObject var model: ZonesModel
+    var body: some View {
+        GeometryReader { g in
+            ZStack {
+                Color.black.opacity(model.target == nil ? 0.12 : 0)
+                ForEach(DeckEdge.allCases, id: \.self) { edge in
+                    let on = model.target == edge
+                    Capsule().fill(on ? Color(red: 1.0, green: 0.80, blue: 0.22) : Color.white.opacity(model.target == nil ? 0.0 : 0.35))
+                        .frame(width: edge.isVertical ? (on ? 10 : 6) : g.size.width * 0.3, height: edge.isVertical ? g.size.height * 0.3 : (on ? 10 : 6))
+                        .shadow(color: .black.opacity(on ? 0.4 : 0), radius: 8)
+                        .position(x: edge == .left ? 10 : edge == .right ? g.size.width - 10 : g.size.width / 2,
+                                  y: edge == .top ? 10 : edge == .bottom ? g.size.height - 10 : g.size.height / 2)
+                }
+            }
+            .animation(.easeOut(duration: 0.12), value: model.target)
+        }
+    }
+}
+
+/// Un voile par écran pendant le glissement de la poignée : l'écran visé et son bord s'allument.
+@MainActor
+final class DropZones {
+    private var items: [(screen: NSScreen, panel: NSPanel, model: ZonesModel)] = []
+
+    func show() {
+        hide()
+        for screen in NSScreen.screens {
+            let model = ZonesModel()
+            let panel = NSPanel(contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+            panel.contentView = NSHostingView(rootView: ZonesView(model: model))
+            panel.isOpaque = false; panel.backgroundColor = .clear; panel.hasShadow = false
+            panel.ignoresMouseEvents = true
+            panel.level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
+            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+            panel.setFrame(screen.frame, display: true)
+            panel.orderFrontRegardless()
+            items.append((screen, panel, model))
+        }
+    }
+
+    func update(_ point: NSPoint) {
+        let target = DeckTarget.resolve(point)
+        for item in items { item.model.target = (target?.screen === item.screen) ? target?.edge : nil }
+    }
+
+    func hide() { items.forEach { $0.panel.orderOut(nil) }; items = [] }
+}
+
+// MARK: - Contrôleur
+
+/// Le deck sur le bord de l'écran : repos (capsule), survol (cartes en écailles), ouverture (la note glisse hors du deck).
 @MainActor
 final class DeckController: NSObject {
     let store: NoteStore
@@ -50,6 +129,7 @@ final class DeckController: NSObject {
     private struct Entry { let screen: NSScreen; let panel: DeckPanel; let model: DeckModel; let host: DeckHostView; var cancel: [AnyCancellable]; var work: DispatchWorkItem? }
     private var entries: [Entry] = []
     private let prefs = Prefs.shared
+    private let zones = DropZones()
     private var clickMonitor: Any?
     private var hidden = false
 
@@ -139,16 +219,19 @@ final class DeckController: NSObject {
                 let gone = self.store.delete([id])
                 Toast.show(L("toast.deleted"), action: L("toast.undo")) { self.store.restore(gone) }
             },
-            dropEdge: { [weak self] point in self?.snapEdge(to: point) })
+            dragMove: { [weak self] point in
+                guard let self else { return }
+                if self.zones.isEmpty { self.zones.show() }
+                self.zones.update(point)
+            },
+            dropEdge: { [weak self] point in self?.zones.hide(); self?.snap(to: point) })
     }
 
-    /// Poignée glissée : le deck va sur l'écran où elle est lâchée, au bord de cet écran le plus proche.
-    private func snapEdge(to point: NSPoint) {
-        guard let screen = NSScreen.screens.first(where: { $0.frame.contains(point) }) ?? NSScreen.primary else { return }
-        let f = screen.frame
-        let distances: [(DeckEdge, CGFloat)] = [(.right, f.maxX - point.x), (.left, point.x - f.minX), (.bottom, point.y - f.minY), (.top, f.maxY - point.y)]
-        if prefs.screenChoice != "all" { prefs.screenChoice = screen == NSScreen.primary ? "main" : String(screen.displayID) }
-        if let best = distances.min(by: { $0.1 < $1.1 }) { prefs.edge = best.0 }
+    /// Poignée lâchée : le deck va sur l'écran visé, au bord visé.
+    private func snap(to point: NSPoint) {
+        guard let target = DeckTarget.resolve(point) else { return }
+        if prefs.screenChoice != "all" { prefs.screenChoice = target.screen == NSScreen.primary ? "main" : String(target.screen.displayID) }
+        prefs.edge = target.edge
     }
 
     // MARK: Taille et position
@@ -158,7 +241,7 @@ final class DeckController: NSObject {
         for e in entries {
             e.model.notes = Array(list.prefix(e.model.maxVisible))
             e.model.overflow = max(0, list.count - e.model.maxVisible)
-            if prefs.keepOpen { e.model.fanned = true } else if !prefs.keepOpen, e.model.fanned, !e.host.isMouseInside { e.model.fanned = false }
+            if prefs.keepOpen { e.model.fanned = true } else if e.model.fanned, !e.host.isMouseInside { e.model.fanned = false }
             e.panel.collectionBehavior = prefs.showOverFullScreen ? [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary] : [.canJoinAllSpaces, .stationary]
             resize(e.model, animated: false)
         }
@@ -176,10 +259,8 @@ final class DeckController: NSObject {
         typealias M = DeckMetrics
         let vf = screen.visibleFrame, sf = screen.frame
         let thick = fanned ? M.fanThickness : M.restThickness
-        let fanLen = CGFloat(count) * (M.tabLength + M.gap) + M.plus * 2 + M.gap * 2 + 16
-        let restLen = max(44, CGFloat(count) * (M.stripeLength + M.stripeGap) + 18)
         let maxLen = (prefs.edge.isVertical ? vf.height : vf.width) - 40
-        let len = min(fanned ? fanLen : restLen, maxLen)
+        let len = min(fanned ? M.fanLength(count: count) : M.restLength(count: count), maxLen)
         switch prefs.edge {
         case .right: return NSRect(x: sf.maxX - thick, y: vf.midY - len / 2, width: thick, height: len)
         case .left: return NSRect(x: sf.minX, y: vf.midY - len / 2, width: thick, height: len)
@@ -209,7 +290,9 @@ final class DeckController: NSObject {
         } else if !need, let m = clickMonitor { NSEvent.removeMonitor(m); clickMonitor = nil }
     }
 
-    /// Ouvre le deck et rend le cadre de la languette d'une note (essais sans souris).
+    /// Essai : affiche les zones de dépôt comme pendant un glissement, le pointeur étant en `point`.
+    func showZonesForTesting(_ point: NSPoint) { zones.show(); zones.update(point) }
+
     func fanForTesting() { for e in entries { e.model.fanned = true } }
 
     func capture(to path: String) {
@@ -225,6 +308,8 @@ final class DeckController: NSObject {
     }
 }
 
+private extension DropZones { var isEmpty: Bool { items.isEmpty } }
+
 private extension NSView {
     var isMouseInside: Bool {
         guard let window else { return false }
@@ -239,111 +324,141 @@ struct DeckActions {
     var pin: (UUID) -> Void
     var archive: (UUID) -> Void
     var delete: (UUID) -> Void
+    var dragMove: (NSPoint) -> Void
     var dropEdge: (NSPoint) -> Void
 }
 
+// MARK: - Dessin
+
+/// Le deck est dessiné une seule fois comme sur le bord droit (cartes qui dépassent vers la gauche), puis tourné
+/// selon le bord choisi : l'écran, le bord et le sens des étiquettes restent cohérents partout.
 struct DeckView: View {
     @ObservedObject var model: DeckModel
     @ObservedObject var prefs: Prefs
     let actions: DeckActions
 
-    private typealias M = DeckMetrics
-    private var vertical: Bool { prefs.edge.isVertical }
-    private var alignment: Alignment { switch prefs.edge { case .right: return .trailing; case .left: return .leading; case .bottom: return .bottom; case .top: return .top } }
-    private var hiddenOffset: CGSize {
-        switch prefs.edge { case .right: return CGSize(width: 44, height: 0); case .left: return CGSize(width: -44, height: 0); case .bottom: return CGSize(width: 0, height: 44); case .top: return CGSize(width: 0, height: -44) }
+    private var angle: Double {
+        switch prefs.edge { case .right: return 0; case .left: return 180; case .bottom: return 90; case .top: return -90 }
     }
-    private var layout: AnyLayout { vertical ? AnyLayout(VStackLayout(spacing: M.gap)) : AnyLayout(HStackLayout(spacing: M.gap)) }
-    private var restLayout: AnyLayout { vertical ? AnyLayout(VStackLayout(spacing: M.stripeGap)) : AnyLayout(HStackLayout(spacing: M.stripeGap)) }
 
     var body: some View {
-        ZStack(alignment: alignment) {
+        GeometryReader { g in
+            let vertical = prefs.edge.isVertical
+            let canvas = CGSize(width: vertical ? g.size.width : g.size.height, height: vertical ? g.size.height : g.size.width)
+            DeckCanvas(model: model, prefs: prefs, actions: actions, labelFlip: prefs.edge == .top)
+                .frame(width: canvas.width, height: canvas.height)
+                .rotationEffect(.degrees(angle))
+                .frame(width: g.size.width, height: g.size.height)
+        }
+        .contentShape(Rectangle())
+    }
+}
+
+private struct DeckCanvas: View {
+    @ObservedObject var model: DeckModel
+    @ObservedObject var prefs: Prefs
+    let actions: DeckActions
+    let labelFlip: Bool
+    private typealias M = DeckMetrics
+    /// Le premier de la liste reste en haut (colonne) ou à gauche (rangée), quel que soit le bord.
+    private var ordered: [Note] { prefs.edge == .bottom || prefs.edge == .left ? model.notes.reversed() : model.notes }
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
             rest.opacity(model.fanned ? 0 : 1).animation(.easeOut(duration: 0.12), value: model.fanned)
             fan
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: alignment)
-        .contentShape(Rectangle())
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
     }
 
-    // Repos : une languette (ou un point) par note.
+    // Repos : une capsule sombre translucide, une pastille de couleur par note.
     private var rest: some View {
-        restLayout {
-            if model.notes.isEmpty { Capsule().fill(Color.gray.opacity(0.5)).frame(width: vertical ? M.stripe : M.stripeLength, height: vertical ? M.stripeLength : M.stripe) }
+        VStack(spacing: M.dashGap) {
+            if model.notes.isEmpty { Capsule().fill(Color.white.opacity(0.35)).frame(width: 6, height: M.dash) }
             switch prefs.dockStyle {
             case .stripes:
-                ForEach(model.notes) { n in
-                    RoundedRectangle(cornerRadius: 3).fill(Color(noteColor: n.color))
-                        .frame(width: vertical ? M.stripe : M.stripeLength, height: vertical ? M.stripeLength : M.stripe)
-                        .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.black.opacity(0.3), lineWidth: 0.5))
-                }
+                ForEach(ordered) { n in Capsule().fill(Color(noteColor: n.color)).frame(width: 6, height: M.dash) }
             case .dots:
-                ForEach(model.notes) { n in Circle().fill(Color(noteColor: n.color)).frame(width: 8, height: 8).overlay(Circle().stroke(Color.black.opacity(0.3), lineWidth: 0.5)) }
+                ForEach(ordered) { n in Circle().fill(Color(noteColor: n.color)).frame(width: 7, height: 7) }
             case .pile:
                 ZStack {
                     ForEach(Array(model.notes.prefix(3).enumerated().reversed()), id: \.element.id) { i, n in
-                        RoundedRectangle(cornerRadius: 3).fill(Color(noteColor: n.color))
-                            .frame(width: vertical ? 10 : 22, height: vertical ? 22 : 10)
-                            .overlay(RoundedRectangle(cornerRadius: 3).stroke(Color.black.opacity(0.3), lineWidth: 0.5))
-                            .offset(x: vertical ? CGFloat(i) * -1.5 : CGFloat(i) * 4, y: vertical ? CGFloat(i) * 4 : CGFloat(i) * -1.5)
+                        Capsule().fill(Color(noteColor: n.color)).frame(width: 6, height: M.dash).offset(x: CGFloat(i) * -1.5, y: CGFloat(i) * 4)
                     }
-                }
-                .frame(width: vertical ? 14 : 30, height: vertical ? 30 : 14)
+                }.frame(height: M.dash + 8)
             }
         }
-        .padding(vertical ? .vertical : .horizontal, 8)
-        .padding(prefs.edge == .right ? .trailing : prefs.edge == .left ? .leading : prefs.edge == .bottom ? .bottom : .top, 2)
+        .padding(.vertical, 8).frame(width: 12)
+        .background(Capsule().fill(Color.black.opacity(0.42)))
+        .overlay(Capsule().stroke(Color.white.opacity(0.10), lineWidth: 0.5))
+        .padding(.trailing, 3)
         .allowsHitTesting(false)
     }
 
-    // Survol : les notes sortent en cascade (45 ms entre deux).
+    // Survol : les cartes se posent en écailles, 45 ms entre deux, chacune avec son étiquette verticale.
     private var fan: some View {
-        layout {
-            handle.fanItem(0, model.fanned, hiddenOffset)
-            ForEach(Array(model.notes.enumerated()), id: \.element.id) { i, n in
-                tab(n).fanItem(i + 1, model.fanned, hiddenOffset)
+        VStack(alignment: .trailing, spacing: -M.overlap) {
+            handle.fanItem(0, model.fanned).padding(.trailing, 22).padding(.bottom, M.overlap + 4)
+            ForEach(Array(ordered.enumerated()), id: \.element.id) { i, n in
+                card(n, index: i).fanItem(i + 1, model.fanned).zIndex(Double(i))
             }
             if model.overflow > 0 {
                 Button(action: actions.all) {
-                    Text(L("deck.more", model.overflow)).socle(Socle.T.labelStrong).foregroundStyle(Color.white)
-                        .frame(width: vertical ? M.tab : M.tabLength / 2, height: vertical ? M.tabLength / 2 : M.tab)
-                        .background(Color(white: 0.25)).clipShape(RoundedRectangle(cornerRadius: 8))
-                }.buttonStyle(.plain).fanItem(model.notes.count + 1, model.fanned, hiddenOffset)
+                    Text(L("deck.more", model.overflow)).font(.system(size: 11, weight: .bold)).foregroundStyle(Color.white)
+                        .frame(width: 34, height: 22).background(Capsule().fill(Color.black.opacity(0.55)))
+                }.buttonStyle(.plain).padding(.trailing, 22).padding(.top, M.overlap + 6).fanItem(model.notes.count + 1, model.fanned)
             }
             Button(action: actions.new) {
-                Image(systemName: "plus").font(.system(size: 13, weight: .bold)).foregroundStyle(Color.white)
-                    .frame(width: M.plus, height: M.plus).background(Color(white: 0.22)).clipShape(Circle())
+                Image(systemName: "plus").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color(white: 0.25))
+                    .frame(width: M.plus, height: M.plus).background(Circle().fill(Color(white: 0.9)))
+                    .shadow(color: .black.opacity(0.25), radius: 3, y: 1)
             }
-            .buttonStyle(.plain).help(L("deck.new")).fanItem(model.notes.count + 2, model.fanned, hiddenOffset)
+            .buttonStyle(.plain).help(L("deck.new")).padding(.trailing, 22).padding(.top, M.overlap + 10)
+            .fanItem(model.notes.count + 2, model.fanned)
         }
-        .padding(8)
+        .padding(.vertical, 10)
     }
 
     private var handle: some View {
-        Image(systemName: vertical ? "line.3.horizontal" : "line.3.horizontal")
-            .font(.system(size: 11, weight: .bold)).foregroundStyle(Color.white.opacity(0.8))
-            .frame(width: M.plus, height: 16).background(Color(white: 0.22)).clipShape(Capsule())
+        HStack(spacing: 3) { ForEach(0..<3, id: \.self) { _ in Circle().fill(Color.white.opacity(0.8)).frame(width: 3.5, height: 3.5) } }
+            .rotationEffect(.degrees(90))
+            .frame(width: 14, height: 24)
+            .background(Capsule().fill(Color.black.opacity(0.45)))
             .help(L("deck.drag"))
-            .gesture(DragGesture(minimumDistance: 6, coordinateSpace: .global).onEnded { _ in actions.dropEdge(NSEvent.mouseLocation) })
+            .gesture(DragGesture(minimumDistance: 4, coordinateSpace: .global)
+                .onChanged { _ in actions.dragMove(NSEvent.mouseLocation) }
+                .onEnded { _ in actions.dropEdge(NSEvent.mouseLocation) })
     }
 
-    private func tab(_ n: Note) -> some View {
+    private func card(_ n: Note, index: Int) -> some View {
         let hex = NoteColor.hex(n.color)
-        let tone = NoteColor.isLight(hex) ? Color(white: 0.12) : Color.white
+        let tone = NoteColor.isLight(hex) ? Color(white: 0.2) : Color.white
+        let label = String(n.displayTitle(fallback: L("note.untitled")).uppercased().prefix(8))
+        let visible = M.baseWidth + CGFloat(min(index, 7)) * M.stair
         let title = ([n.emoji, n.displayTitle(fallback: L("note.untitled"))].filter { !$0.isEmpty }).joined(separator: " ")
         return GeometryReader { proxy in
             Button { actions.open(n.id, tabFrame(proxy)) } label: {
-                Text(title).font(.system(size: 12, weight: .semibold)).lineLimit(1).truncationMode(.tail)
-                    .foregroundStyle(tone).frame(width: M.tabLength - 12)
-                    .rotationEffect(.degrees(prefs.edge == .right ? -90 : prefs.edge == .left ? 90 : 0))
-                    .frame(width: vertical ? M.tab : M.tabLength, height: vertical ? M.tabLength : M.tab)
-                    .background(Color(noteColor: n.color))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.black.opacity(0.25), lineWidth: 1))
-                    .overlay(alignment: .topTrailing) { if n.pinned { Image(systemName: "pin.fill").font(.system(size: 8)).foregroundStyle(tone.opacity(0.7)).padding(3) } }
+                HStack(spacing: 0) {
+                    Text(label).font(.system(size: 10, weight: .bold)).tracking(1.4).lineLimit(1).fixedSize()
+                        .foregroundStyle(tone.opacity(0.7))
+                        .rotationEffect(.degrees(labelFlip ? 90 : -90))
+                        .frame(width: 30, height: M.cardLength)
+                        .overlay(alignment: .topLeading) { if n.pinned { Image(systemName: "pin.fill").font(.system(size: 8)).foregroundStyle(tone.opacity(0.6)).padding(5) } }
+                    Rectangle().fill(Color.clear).frame(width: 1, height: M.cardLength - 20)
+                        .overlay(DashedLine().stroke(tone.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [3, 3])))
+                    Spacer(minLength: 0)
+                }
+                .frame(width: visible + M.hidden, height: M.cardLength, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color(noteColor: n.color)))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.black.opacity(0.10), lineWidth: 0.5))
+                .shadow(color: .black.opacity(0.28), radius: 5, x: -1, y: 2)
+                .rotationEffect(.degrees(-1), anchor: .trailing)
+                .offset(x: 0)
             }
             .buttonStyle(.plain)
         }
-        .frame(width: vertical ? M.tab : M.tabLength, height: vertical ? M.tabLength : M.tab)
+        .frame(width: visible + M.hidden, height: M.cardLength)
+        .padding(.trailing, -M.hidden)
         .help(title)
         .contextMenu {
             Button(L("tab.pin_" + (n.pinned ? "off" : "on"))) { actions.pin(n.id) }
@@ -352,16 +467,21 @@ struct DeckView: View {
         }
     }
 
-    /// Cadre (en coordonnées d'écran) de la languette, pour poser la note à côté.
+    /// Point de l'écran où s'est fait le clic : la note s'ouvre à côté.
     private func tabFrame(_ proxy: GeometryProxy) -> NSRect {
         let mouse = NSEvent.mouseLocation
         return NSRect(x: mouse.x - 1, y: mouse.y - 1, width: 2, height: 2)
     }
 }
 
+private struct DashedLine: Shape {
+    func path(in rect: CGRect) -> Path { Path { p in p.move(to: CGPoint(x: rect.midX, y: rect.minY)); p.addLine(to: CGPoint(x: rect.midX, y: rect.maxY)) } }
+}
+
 private extension View {
-    func fanItem(_ index: Int, _ fanned: Bool, _ hidden: CGSize) -> some View {
-        self.offset(fanned ? .zero : hidden)
+    /// Les cartes arrivent du bord, l'une après l'autre.
+    func fanItem(_ index: Int, _ fanned: Bool) -> some View {
+        self.offset(x: fanned ? 0 : 90)
             .opacity(fanned ? 1 : 0)
             .animation(.spring(response: 0.3, dampingFraction: 0.78).delay(fanned ? Double(index) * 0.045 : 0), value: fanned)
     }

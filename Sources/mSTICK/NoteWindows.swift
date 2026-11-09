@@ -40,7 +40,7 @@ final class NoteWindows: NSObject, NSWindowDelegate {
         vm.onDelete = { [weak self] in self?.deleteWithUndo(id) }
         let host = NSHostingView(rootView: NoteView(vm: vm, store: store))
         host.wantsLayer = true
-        host.layer?.cornerRadius = 10
+        host.layer?.cornerRadius = 14
         host.layer?.masksToBounds = true
         let panel = NotePanel(contentRect: frame ?? place(id, tabFrame: tabFrame), styleMask: [.borderless, .resizable],
                               backing: .buffered, defer: false)
@@ -51,7 +51,7 @@ final class NoteWindows: NSObject, NSWindowDelegate {
         panel.isMovableByWindowBackground = true
         panel.isReleasedWhenClosed = false
         panel.hidesOnDeactivate = false // un panneau se masque sinon dès que l'appli (sans Dock) n'est plus active
-        panel.minSize = NSSize(width: 220, height: 150)
+        panel.minSize = NSSize(width: 240, height: 150)
         panel.collectionBehavior = Prefs.shared.showOverFullScreen ? [.canJoinAllSpaces, .fullScreenAuxiliary] : [.moveToActiveSpace]
         panel.delegate = self
         panel.keyHandler = { [weak self, weak panel] event in
@@ -61,7 +61,25 @@ final class NoteWindows: NSObject, NSWindowDelegate {
         applyLevel(panel, pinned: store.note(id)?.pinned ?? false)
         panels[id] = panel; models[id] = vm
         lastOpened = id
-        reveal(panel, quietly: quietly)
+        if quietly || frame != nil { reveal(panel, quietly: quietly); return }
+        // La note glisse hors du deck : elle part du bord de l'écran et se pose à sa place.
+        let final = panel.frame
+        var start = final
+        switch Prefs.shared.edge {
+        case .right: start.origin.x += 70
+        case .left: start.origin.x -= 70
+        case .bottom: start.origin.y -= 50
+        case .top: start.origin.y += 50
+        }
+        panel.setFrame(start, display: false)
+        panel.alphaValue = 0
+        reveal(panel, quietly: false)
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.24
+            ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            panel.animator().setFrame(final, display: true)
+            panel.animator().alphaValue = 1
+        }
     }
 
     private func reveal(_ panel: NotePanel, quietly: Bool) {
@@ -148,7 +166,7 @@ final class NoteWindows: NSObject, NSWindowDelegate {
     // MARK: Emplacement
 
     private func place(_ id: UUID, tabFrame: NSRect?) -> NSRect {
-        let size = NSSize(width: 300, height: 300)
+        let size = NSSize(width: 340, height: 240)
         if let saved = defaults.string(forKey: "frame." + id.uuidString) {
             let r = NSRectFromString(saved)
             if r.width > 100, NSScreen.screens.contains(where: { $0.visibleFrame.intersects(r) }) { return r }

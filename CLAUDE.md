@@ -8,7 +8,8 @@ sans fenêtre au lancement (`LSUIElement`).
 - Cœur (`Sources/mSTICKCore`) : `Note`, `Vault` (un fichier AES-GCM par note, clé au Trousseau, marqueurs de suppression), `NoteStore`
   (enregistrement 250 ms après la dernière frappe, annulation de suppression), `SyncEngine` (dossier iCloud, `<id>.hmnote` en clair
   + `<id>.hmdeleted`, la plus récente gagne), `Exporter` (.md, .txt, fichier unique, .stickies, dossier Markdown), `MarkdownScanner`.
-- Application : `Deck.swift` (languettes → éventail, une fenêtre par écran), `NoteWindows`/`NoteView`/`StickTextView` (éditeur Markdown
+- Design (repris de holdmynotes.app) : repos = capsule sombre avec une pastille par note ; survol = cartes en écailles (étiquette verticale en majuscules, perforation en pointillés, 45 ms entre deux) ; ouverture = la même carte, qui glisse hors du deck, étiquette du côté du deck, police manuscrite. Le deck est dessiné une fois côté droit puis tourné (`DeckView`). Pendant le glissement de la poignée, `DropZones` allume l'écran et le bord visés (`DeckTarget.resolve`).
+- Application : `Deck.swift` (une fenêtre par écran), `NoteWindows`/`NoteView`/`StickTextView` (éditeur Markdown
   en direct), `AllNotesView`, `SettingsView`, `HotkeyCenter` (Carbon, sans autorisation), icône de barre des menus monochrome
   (le menu s'ouvre à la main sous l'icône, jamais `statusItem.menu`).
 - Données : `~/Library/Application Support/mSTICK` (`MSTICK_DATA_DIR`, `MSTICK_KEY_FILE` pour les essais).

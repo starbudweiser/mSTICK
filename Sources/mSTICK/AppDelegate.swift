@@ -58,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if args.contains("--discret-reglages") { settings.show(store: store, quietly: true) }
         if args.contains("--deck-ouvert") { deck.fanForTesting() }
         if args.contains("--demo-notes") { demoNotes() }
+        if let i = args.firstIndex(of: "--zones-test"), args.indices.contains(i + 2), let x = Double(args[i + 1]), let y = Double(args[i + 2]) { deck.showZonesForTesting(NSPoint(x: x, y: y)) }
     }
 
     private var cancellables = Set<AnyCancellable>()

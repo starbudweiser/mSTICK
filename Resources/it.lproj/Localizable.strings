@@ -90,6 +90,7 @@
 "settings.colors.add" = "Aggiungi";
 "settings.colors.remove" = "Clic per rimuovere questo colore";
 "settings.deck" = "DECK";
+"settings.defaultfont" = "Carattere delle note";
 "settings.delay" = "Ritardo di attivazione";
 "settings.dockstyle" = "Aspetto a riposo";
 "settings.edge" = "Posizione";

@@ -52,6 +52,12 @@ struct SettingsView: View {
                 }
             }
             section("settings.notes") {
+                row("settings.defaultfont") {
+                    Picker("", selection: $prefs.defaultFont) {
+                        Text(L("note.font.system")).tag("")
+                        ForEach(["Bradley Hand", "Noteworthy", "Marker Felt", "Chalkboard SE", "Avenir Next", "Georgia", "Menlo"].filter { NSFontManager.shared.availableFontFamilies.contains($0) }, id: \.self) { Text($0).tag($0) }
+                    }.labelsHidden().frame(width: 180)
+                }
                 row("settings.fontsize") { Picker("", selection: $prefs.fontSize) { ForEach(Prefs.fontSizes, id: \.self) { Text("\($0) pt").tag($0) } }.labelsHidden().frame(width: 180) }
                 toggle("settings.autohide", $prefs.autoHideToolbar)
                 toggle("settings.emoji", $prefs.emojiButton)

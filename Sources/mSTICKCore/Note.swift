@@ -36,7 +36,7 @@ public struct Note: Codable, Identifiable, Equatable, Sendable {
 /// Couleurs de base d'une note et lecture des couleurs personnalisées.
 public enum NoteColor {
     public static let palette: [(id: String, hex: String)] = [
-        ("yellow", "#FFE680"), ("pink", "#FFB8D1"), ("green", "#B8E6A8"), ("blue", "#A8D4FF"), ("purple", "#D4B8FF"),
+        ("yellow", "#F8D872"), ("pink", "#F5A9A2"), ("green", "#A8E4C4"), ("blue", "#A9CBF8"), ("purple", "#CFC0F5"),
     ]
 
     /// #RRGGBB de la couleur d'une note.

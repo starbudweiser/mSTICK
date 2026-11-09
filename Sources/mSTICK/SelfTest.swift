@@ -1,4 +1,5 @@
 import AppKit
+import mSTICKCore
 
 /// `mSTICK --selftest` : vérifie l'éditeur (listes, mise en forme) sans ouvrir de fenêtre. Code de sortie 1 en cas d'échec.
 @MainActor
@@ -33,6 +34,18 @@ enum SelfTest {
         tv = editor("# T\n**g**"); tv.fontSize = 14; tv.restyle()
         let heading = tv.textStorage?.attribute(.font, at: 2, effectiveRange: nil) as? NSFont
         check("titre plus grand", (heading?.pointSize ?? 0) > 14 ? "oui" : "non", "oui")
+        // Déplacement du deck : le bord et l'écran visés, y compris sur un second écran (portrait compris).
+        for screen in NSScreen.screens {
+            let f = screen.frame, name = screen.localizedName
+            let cases: [(String, NSPoint, DeckEdge)] = [("droite", NSPoint(x: f.maxX - 1, y: f.midY), .right), ("bas", NSPoint(x: f.midX, y: f.minY + 1), .bottom),
+                                                         ("gauche", NSPoint(x: f.minX + 1, y: f.midY), .left), ("haut", NSPoint(x: f.midX, y: f.maxY - 1), .top)]
+            for (label, point, edge) in cases {
+                let r = DeckTarget.resolve(point)
+                check("cible \(label) de \(name)", "\(r?.screen.displayID ?? 0)/\(r?.edge.rawValue ?? "?")", "\(screen.displayID)/\(edge.rawValue)")
+            }
+            let outside = DeckTarget.resolve(NSPoint(x: f.maxX + 0.5, y: f.midY - 3))
+            check("hors bord de \(name) : écran le plus proche", outside.map { String($0.screen.displayID) } ?? "?", NSScreen.screens.first(where: { $0.frame.contains(NSPoint(x: f.maxX + 0.5, y: f.midY - 3)) }).map { String($0.displayID) } ?? String(screen.displayID))
+        }
         print(failures == 0 ? "Tous les essais passent." : "\(failures) échec(s).")
         return failures == 0
     }

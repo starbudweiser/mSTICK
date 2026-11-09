@@ -26,23 +26,58 @@ struct NoteView: View {
     @State private var hoverClose = false
 
     private var note: Note { store.note(vm.id) ?? Note(id: vm.id) }
+    private var chromeVisible: Bool { vm.hovering || options || emojis }
     private var hex: String { NoteColor.hex(note.color) }
     private var tone: Color { NoteColor.isLight(hex) ? Color(white: 0.12) : Color(white: 0.95) }
     private var nsTone: NSColor { NoteColor.isLight(hex) ? NSColor(white: 0.12, alpha: 1) : NSColor(white: 0.95, alpha: 1) }
 
-    var body: some View {
+    private var content: some View {
         VStack(spacing: 0) {
             titleBar
-            NoteEditor(text: note.body, family: note.font, size: CGFloat(prefs.fontSize), tone: nsTone,
+            NoteEditor(text: note.body, family: note.font ?? (prefs.defaultFont.isEmpty ? nil : prefs.defaultFont), size: CGFloat(prefs.fontSize), tone: nsTone,
                        onChange: { text in store.update(vm.id) { $0.body = text } },
                        onCancel: { vm.onClose() },
                        ready: { vm.editor = $0 })
             if !prefs.autoHideToolbar || vm.hovering || vm.showFormat { toolbar }
         }
+    }
+
+    /// Même carte que dans le deck : une languette avec le nom en vertical, une perforation, puis la note.
+    /// La languette est du côté de l'écran où se trouve le deck.
+    var body: some View {
+        Group {
+            switch prefs.edge {
+            case .right: HStack(spacing: 0) { strip(vertical: true); content }
+            case .left: HStack(spacing: 0) { content; strip(vertical: true) }
+            case .bottom: VStack(spacing: 0) { strip(vertical: false); content }
+            case .top: VStack(spacing: 0) { content; strip(vertical: false) }
+            }
+        }
         .background(Color(noteColor: note.color))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.black.opacity(0.18), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.black.opacity(0.12), lineWidth: 0.5))
         .onHover { vm.hovering = $0 }
+    }
+
+    private func strip(vertical: Bool) -> some View {
+        let label = note.displayTitle(fallback: L("note.untitled")).uppercased()
+        let text = Text(label).font(.system(size: 10, weight: .bold)).tracking(1.4).lineLimit(1).foregroundStyle(tone.opacity(0.65))
+        let dash = StrokeStyle(lineWidth: 1, dash: [3, 3])
+        return Group {
+            if vertical {
+                text.rotationEffect(.degrees(prefs.edge == .right ? -90 : 90)).fixedSize().frame(width: 30).frame(maxHeight: .infinity)
+                    .overlay(alignment: prefs.edge == .right ? .trailing : .leading) {
+                        Rectangle().fill(Color.clear).frame(width: 1).padding(.vertical, 12)
+                            .overlay(StripLine(vertical: true).stroke(tone.opacity(0.3), style: dash))
+                    }
+            } else {
+                text.frame(maxWidth: .infinity).frame(height: 26).padding(.horizontal, 12)
+                    .overlay(alignment: prefs.edge == .bottom ? .bottom : .top) {
+                        Rectangle().fill(Color.clear).frame(height: 1).padding(.horizontal, 12)
+                            .overlay(StripLine(vertical: false).stroke(tone.opacity(0.3), style: dash))
+                    }
+            }
+        }
     }
 
     private var titleBar: some View {
@@ -65,6 +100,7 @@ struct NoteView: View {
                 .textFieldStyle(.plain)
                 .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(tone)
+            Group {
             Button { store.update(vm.id) { $0.pinned.toggle() } } label: {
                 Image(systemName: note.pinned ? "pin.fill" : "pin").font(.system(size: 12)).foregroundStyle(tone.opacity(note.pinned ? 1 : 0.55))
             }
@@ -74,6 +110,8 @@ struct NoteView: View {
             }
             .buttonStyle(.plain).help(L("note.options"))
             .popover(isPresented: $options, arrowEdge: .bottom) { optionsView }
+            }
+            .opacity(chromeVisible || note.pinned ? 1 : 0)
         }
         .padding(.horizontal, 12).padding(.top, 10).padding(.bottom, 4)
     }
@@ -149,5 +187,16 @@ struct NoteView: View {
         }
         .padding(14)
         .frame(width: 214, alignment: .leading)
+    }
+}
+
+
+private struct StripLine: Shape {
+    let vertical: Bool
+    func path(in rect: CGRect) -> Path {
+        Path { p in
+            if vertical { p.move(to: CGPoint(x: rect.midX, y: rect.minY)); p.addLine(to: CGPoint(x: rect.midX, y: rect.maxY)) }
+            else { p.move(to: CGPoint(x: rect.minX, y: rect.midY)); p.addLine(to: CGPoint(x: rect.maxX, y: rect.midY)) }
+        }
     }
 }

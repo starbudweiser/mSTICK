@@ -90,6 +90,7 @@
 "settings.colors.add" = "Añadir";
 "settings.colors.remove" = "Clic para quitar este color";
 "settings.deck" = "DECK";
+"settings.defaultfont" = "Fuente de las notas";
 "settings.delay" = "Retraso de activación";
 "settings.dockstyle" = "Aspecto en reposo";
 "settings.edge" = "Posición";

@@ -32,6 +32,7 @@ final class Prefs: ObservableObject {
     @Published var keepOpen: Bool { didSet { d.set(keepOpen, forKey: "keepOpen"); changed() } }
     @Published var fanOnClick: Bool { didSet { d.set(fanOnClick, forKey: "fanOnClick"); changed() } }
     @Published var screenChoice: String { didSet { d.set(screenChoice, forKey: "screens"); changed() } }
+    @Published var defaultFont: String { didSet { d.set(defaultFont, forKey: "defaultFont"); changed() } }
     @Published var fontSize: Int { didSet { d.set(fontSize, forKey: "fontSize"); changed() } }
     @Published var activationDelay: Double { didSet { d.set(activationDelay, forKey: "activationDelay"); changed() } }
     @Published var showOverFullScreen: Bool { didSet { d.set(showOverFullScreen, forKey: "showOverFullScreen"); changed() } }
@@ -56,7 +57,8 @@ final class Prefs: ObservableObject {
         keepOpen = bool("keepOpen", false)
         fanOnClick = bool("fanOnClick", false)
         screenChoice = d.string(forKey: "screens") ?? "main"
-        fontSize = d.object(forKey: "fontSize") as? Int ?? 14
+        fontSize = d.object(forKey: "fontSize") as? Int ?? 18
+        defaultFont = d.string(forKey: "defaultFont") ?? (NSFontManager.shared.availableFontFamilies.contains("Bradley Hand") ? "Bradley Hand" : "")
         activationDelay = d.object(forKey: "activationDelay") as? Double ?? 0.05
         showOverFullScreen = bool("showOverFullScreen", true)
         autoHideToolbar = bool("autoHideToolbar", false)
