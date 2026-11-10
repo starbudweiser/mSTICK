@@ -63,6 +63,7 @@ final class NoteWindows: NSObject, NSWindowDelegate {
         if let existing = panels[id] { quietly ? existing.orderFront(nil) : existing.present(); activateIfStacked(id); return }
         guard store.note(id) != nil else { return }
         let vm = NoteViewModel(id: id, store: store)
+        vm.editing = store.note(id)?.body.isEmpty ?? true // note neuve : on écrit tout de suite ; sinon rendu
         vm.onClose = { [weak self] in self?.close(id) }
         vm.onDelete = { [weak self] in self?.deleteWithUndo(id) }
         vm.onActivate = { [weak self] in self?.activate(id) }

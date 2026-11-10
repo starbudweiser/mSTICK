@@ -23,6 +23,8 @@
 "all.imported" = "%d note(s) added.";
 "all.nomatch" = "No matching notes.";
 "all.open" = "Open";
+"note.mode.render" = "Show preview";
+"note.mode.edit" = "Edit Markdown";
 "all.mode.render" = "Preview";
 "all.mode.edit" = "Edit";
 "all.preview.many" = "%d notes selected";

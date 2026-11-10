@@ -3,6 +3,13 @@ import SwiftUI
 /// Rendu simple d'une note Markdown, sans les balises : titres, listes, cases, citations, filets, tableaux, code, gras / italique / lien.
 struct MarkdownPreview: View {
     let text: String
+    var size: CGFloat = 15
+    var family: String? = nil
+    var strong: Color = Socle.C.textStrong
+    var ink: Color = Socle.C.text
+    var muted: Color = Socle.C.textMuted
+    var tint: Color = Socle.C.accent
+    var line: Color = Socle.C.border
 
     private enum Block {
         case heading(Int, String), bullet(String, indent: Int), number(String, String), task(Bool, String)
@@ -13,27 +20,28 @@ struct MarkdownPreview: View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(Self.parse(text).enumerated()), id: \.offset) { _, b in view(b) }
         }
+        .font(f(size, .regular)).foregroundStyle(ink)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder private func view(_ b: Block) -> some View {
         switch b {
         case .heading(let level, let s):
-            inline(s).font(.system(size: [24, 20, 17, 15][min(level, 4) - 1], weight: .bold)).foregroundStyle(Socle.C.textStrong).padding(.top, level == 1 ? 6 : 3)
+            inline(s).font(f(size * [1.6, 1.35, 1.15, 1.0][min(level, 4) - 1], .bold)).foregroundStyle(strong).padding(.top, level == 1 ? 6 : 3)
         case .bullet(let s, let indent):
-            HStack(alignment: .firstTextBaseline, spacing: 8) { Text("•").foregroundStyle(Socle.C.textMuted); inline(s) }.padding(.leading, CGFloat(indent) * 16)
+            HStack(alignment: .firstTextBaseline, spacing: 8) { Text("•").foregroundStyle(muted); inline(s) }.padding(.leading, CGFloat(indent) * 16)
         case .number(let n, let s):
-            HStack(alignment: .firstTextBaseline, spacing: 8) { Text(n).foregroundStyle(Socle.C.textMuted).monospacedDigit(); inline(s) }
+            HStack(alignment: .firstTextBaseline, spacing: 8) { Text(n).foregroundStyle(muted).monospacedDigit(); inline(s) }
         case .task(let done, let s):
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Image(systemName: done ? "checkmark.square.fill" : "square").foregroundStyle(done ? Socle.C.accent : Socle.C.textMuted)
-                inline(s).strikethrough(done).foregroundStyle(done ? Socle.C.textMuted : Socle.C.text)
+                Image(systemName: done ? "checkmark.square.fill" : "square").foregroundStyle(done ? tint : muted)
+                inline(s).strikethrough(done).foregroundStyle(done ? muted : ink)
             }
         case .quote(let s):
-            HStack(spacing: 10) { Rectangle().fill(Socle.C.border).frame(width: 3); inline(s).foregroundStyle(Socle.C.textMuted) }
-        case .rule: Divider().overlay(Socle.C.border).padding(.vertical, 4)
+            HStack(spacing: 10) { Rectangle().fill(line).frame(width: 3); inline(s).foregroundStyle(muted) }
+        case .rule: Divider().overlay(line).padding(.vertical, 4)
         case .code(let s):
-            Text(s).font(.system(size: 13, design: .monospaced)).padding(8).frame(maxWidth: .infinity, alignment: .leading)
+            Text(s).font(.system(size: size * 0.9, design: .monospaced)).padding(8).frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color.primary.opacity(0.07)).clipShape(RoundedRectangle(cornerRadius: 4))
         case .table(let rows):
             Grid(alignment: .leading, horizontalSpacing: 0, verticalSpacing: 0) {
@@ -41,7 +49,7 @@ struct MarkdownPreview: View {
                     GridRow {
                         ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
                             inline(cell).fontWeight(i == 0 ? .semibold : .regular).padding(.horizontal, 8).padding(.vertical, 4)
-                                .frame(maxWidth: .infinity, alignment: .leading).overlay(Rectangle().stroke(Socle.C.border, lineWidth: 0.5))
+                                .frame(maxWidth: .infinity, alignment: .leading).overlay(Rectangle().stroke(line, lineWidth: 0.5))
                         }
                     }
                 }
@@ -49,6 +57,11 @@ struct MarkdownPreview: View {
         case .paragraph(let s): inline(s)
         case .gap: Color.clear.frame(height: 4)
         }
+    }
+
+    private func f(_ pt: CGFloat, _ w: Font.Weight) -> Font {
+        if let family, !family.isEmpty { return .custom(family, size: pt).weight(w) }
+        return .system(size: pt, weight: w)
     }
 
     private func inline(_ s: String) -> Text {

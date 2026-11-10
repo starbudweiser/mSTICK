@@ -23,6 +23,8 @@
 "all.imported" = "%d nota/e aggiunta/e.";
 "all.nomatch" = "Nessuna nota corrisponde.";
 "all.open" = "Apri";
+"note.mode.render" = "Mostra anteprima";
+"note.mode.edit" = "Modifica Markdown";
 "all.mode.render" = "Anteprima";
 "all.mode.edit" = "Modifica";
 "all.preview.many" = "%d note selezionate";
