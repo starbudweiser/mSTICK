@@ -16,6 +16,12 @@ public struct Note: Codable, Identifiable, Equatable, Sendable {
     public var updatedAt: Date
     /// Rang dans le deck (0 = en haut / à gauche).
     public var order: Int
+    /// Visible sur tous les bureaux (nil = non).
+    public var allDesktops: Bool?
+    /// Collée au bureau : derrière les fenêtres des autres applis (nil = non).
+    public var glued: Bool?
+    /// Rappels posés dans le texte (« remind me tomorrow at 8pm… »).
+    public var reminders: [NoteReminder]?
 
     public init(id: UUID = UUID(), title: String = "", emoji: String = "", body: String = "", color: String = "yellow",
                 font: String? = nil, pinned: Bool = false, archived: Bool = false,
@@ -37,7 +43,18 @@ public struct Note: Codable, Identifiable, Equatable, Sendable {
 public enum NoteColor {
     public static let palette: [(id: String, hex: String)] = [
         ("yellow", "#F8D872"), ("pink", "#F5A9A2"), ("green", "#A8E4C4"), ("blue", "#A9CBF8"), ("purple", "#CFC0F5"),
+        ("teal", "#8EDAD8"), ("orange", "#F6B684"),
     ]
+
+    /// Mélange deux couleurs (t = part de `b`).
+    public static func mix(_ a: String, _ b: String, _ t: Double) -> String {
+        guard let x = components(a), let y = components(b) else { return a }
+        func c(_ u: Double, _ v: Double) -> Int { Int(((u + (v - u) * t) * 255).rounded()) }
+        return String(format: "#%02X%02X%02X", c(x.red, y.red), c(x.green, y.green), c(x.blue, y.blue))
+    }
+
+    /// Fond d'une note en thème sombre : presque noir, teinté de la couleur de la note (le titre prend la couleur pleine).
+    public static func darkBackground(_ color: String) -> String { mix(hex(color), "#0F0F10", 0.88) }
 
     /// #RRGGBB de la couleur d'une note.
     public static func hex(_ color: String) -> String {
@@ -73,26 +90,16 @@ public struct Hotkey: Codable, Equatable, Sendable {
 
 /// Actions auxquelles on peut associer un raccourci global.
 public enum HotkeyAction: String, CaseIterable, Codable, Sendable {
-    case newNote, reopenLast, allNotes, archive, moveDeck, hideAll
+    case newNote, fan, peek, library, hideAll
 
     public var defaultHotkey: Hotkey {
         let om = Hotkey.option | Hotkey.command
         switch self {
-        case .newNote: return Hotkey(keyCode: 45, modifiers: om)       // N
-        case .reopenLast: return Hotkey(keyCode: 31, modifiers: om)    // O
-        case .allNotes: return Hotkey(keyCode: 37, modifiers: om)      // L
-        case .archive: return Hotkey(keyCode: 0, modifiers: om)        // A
-        case .moveDeck: return Hotkey(keyCode: 14, modifiers: om)      // E
-        case .hideAll: return Hotkey(keyCode: 4, modifiers: Hotkey.control | om) // H
+        case .newNote: return Hotkey(keyCode: 45, modifiers: om)       // ⌥⌘N, depuis n'importe quelle appli
+        case .fan: return Hotkey(keyCode: 3, modifiers: Hotkey.option)  // ⌥F
+        case .peek: return Hotkey(keyCode: 50, modifiers: Hotkey.option) // ⌥`
+        case .library: return Hotkey(keyCode: 37, modifiers: om)       // ⌥⌘L
+        case .hideAll: return Hotkey(keyCode: 4, modifiers: Hotkey.control | om) // ⌃⌥⌘H
         }
     }
-}
-
-public enum DeckEdge: String, CaseIterable, Codable, Sendable {
-    case right, left, bottom, top
-    public var next: DeckEdge {
-        switch self { case .right: return .bottom; case .bottom: return .left; case .left: return .top; case .top: return .right }
-    }
-    /// Le deck est une colonne (bord gauche ou droit) ; sinon une rangée.
-    public var isVertical: Bool { self == .left || self == .right }
 }

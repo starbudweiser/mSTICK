@@ -39,28 +39,15 @@ struct SettingsView: View {
 
     private var general: some View {
         VStack(alignment: .leading, spacing: Socle.M.space4) {
-            section("settings.deck") {
-                row("settings.edge") { Picker("", selection: $prefs.edge) { ForEach(DeckEdge.allCases, id: \.self) { Text(L("edge." + $0.rawValue)).tag($0) } }.labelsHidden().frame(width: 180) }
-                row("settings.dockstyle") { Picker("", selection: $prefs.dockStyle) { ForEach(DockStyle.allCases, id: \.self) { Text(L("dock." + $0.rawValue)).tag($0) } }.labelsHidden().frame(width: 180) }
-                row("settings.screens") { Picker("", selection: $prefs.screenChoice) { ForEach(screenOptions, id: \.id) { Text($0.title).tag($0.id) } }.labelsHidden().frame(width: 220) }
-                toggle("settings.keepopen", $prefs.keepOpen)
-                toggle("settings.fanonclick", $prefs.fanOnClick)
-                toggle("settings.fullscreen", $prefs.showOverFullScreen)
-                row("settings.delay") {
-                    HStack { Slider(value: $prefs.activationDelay, in: 0...1, step: 0.05).frame(width: 150)
-                        Text(String(format: "%.2f s", prefs.activationDelay)).socle(Socle.T.monoSm).foregroundStyle(Socle.C.textMuted).frame(width: 48, alignment: .trailing) }
-                }
-            }
-            section("settings.notes") {
+            section("settings.look") {
+                row("settings.appearance") { Picker("", selection: $prefs.appearance) { ForEach(NoteAppearance.allCases, id: \.self) { Text(L("appearance." + $0.rawValue)).tag($0) } }.labelsHidden().frame(width: 180) }
                 row("settings.defaultfont") {
                     Picker("", selection: $prefs.defaultFont) {
                         Text(L("note.font.system")).tag("")
-                        ForEach(["Bradley Hand", "Noteworthy", "Marker Felt", "Chalkboard SE", "Avenir Next", "Georgia", "Menlo"].filter { NSFontManager.shared.availableFontFamilies.contains($0) }, id: \.self) { Text($0).tag($0) }
+                        ForEach(["Avenir Next", "Georgia", "Menlo", "Bradley Hand", "Noteworthy", "Marker Felt", "Chalkboard SE"].filter { NSFontManager.shared.availableFontFamilies.contains($0) }, id: \.self) { Text($0).tag($0) }
                     }.labelsHidden().frame(width: 180)
                 }
                 row("settings.fontsize") { Picker("", selection: $prefs.fontSize) { ForEach(Prefs.fontSizes, id: \.self) { Text("\($0) pt").tag($0) } }.labelsHidden().frame(width: 180) }
-                toggle("settings.autohide", $prefs.autoHideToolbar)
-                toggle("settings.emoji", $prefs.emojiButton)
                 VStack(alignment: .leading, spacing: Socle.M.space2) {
                     Text(L("settings.colors")).socle(Socle.T.body).foregroundStyle(Socle.C.text)
                     HStack(spacing: 6) {
@@ -75,20 +62,37 @@ struct SettingsView: View {
                     }
                 }
             }
+            section("settings.close") {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                    ForEach(CloseStyle.allCases, id: \.self) { style in
+                        Button { prefs.closeStyle = style } label: {
+                            VStack(spacing: 6) {
+                                CloseGlyph(style: style, color: Socle.C.text, size: 14).frame(height: 18)
+                                Text(L("close." + style.rawValue)).socle(Socle.T.meta).foregroundStyle(Socle.C.textMuted)
+                            }
+                            .frame(maxWidth: .infinity).padding(.vertical, 8)
+                            .background(prefs.closeStyle == style ? Socle.C.accent.opacity(0.18) : Socle.C.surfaceRaised)
+                            .overlay(Rectangle().stroke(prefs.closeStyle == style ? Socle.C.accent : Socle.C.border))
+                        }.buttonStyle(.plain)
+                    }
+                }
+                row("settings.closepos") {
+                    Picker("", selection: $prefs.closeLeft) { Text(L("settings.closepos.left")).tag(true); Text(L("settings.closepos.right")).tag(false) }
+                        .pickerStyle(.segmented).labelsHidden().frame(width: 180)
+                }
+            }
+            section("settings.smart") {
+                toggle("settings.autostack", $prefs.autoStack)
+                toggle("settings.smartcalc", $prefs.smartCalc)
+                toggle("settings.slash", $prefs.slashCommands)
+                toggle("settings.reminders", $prefs.reminders)
+                toggle("settings.fullscreen", $prefs.showOverFullScreen)
+            }
             section("settings.system") {
                 toggle("settings.menubar", $prefs.menuBarIcon)
                 Toggle(L("settings.login"), isOn: Binding(get: { startAtLogin }, set: setLogin)).toggleStyle(.checkbox).socle(Socle.T.body)
             }
         }
-    }
-
-    /// Écran principal, chaque autre écran branché (par son nom), ou tous.
-    private var screenOptions: [(id: String, title: String)] {
-        var list: [(id: String, title: String)] = [("main", L("screens.main"))]
-        for screen in NSScreen.screens.dropFirst() { list.append((String(screen.displayID), L("screens.secondary", screen.localizedName))) }
-        if NSScreen.screens.count > 1 { list.append(("all", L("screens.all"))) }
-        if !list.contains(where: { $0.id == prefs.screenChoice }) { list.append((prefs.screenChoice, L("screens.missing"))) }
-        return list
     }
 
     private func hexString(_ color: Color) -> String? {

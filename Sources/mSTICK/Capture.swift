@@ -12,11 +12,12 @@ enum Capture {
             ("Bureau", "💼", "blue", "1. Relire le devis\n2. Envoyer la *facture*\n3. <u>Sauvegarder</u> `projet`"),
             ("Idées", "💡", "green", "Une app qui **vit** au bord de l'écran."),
             ("Perso", "", "pink", "Anniversaire de Marie le 14."),
+            ("Budget", "", "orange", "price = $129\ndiscount = 27%\nsale price = price - discount\n\n567+45 =\n🔔 tomorrow · 8:00 PM · pick up lunch"),
             ("Projets", "🚀", "purple", "## À lancer\n- [ ] page d'accueil\n- [x] logo\n\nVoir [la doc](https://example.com) et noter `swift build`."),
         ]
         for (i, s) in samples.enumerated() {
             let n = store.create(color: s.2)
-            store.update(n.id) { $0.title = s.0; $0.emoji = s.1; $0.body = s.3; $0.order = i; $0.pinned = i == 0 }
+            store.update(n.id) { $0.title = s.0; $0.emoji = s.1; $0.body = s.3; $0.order = i }
         }
         store.flush()
     }
@@ -36,7 +37,7 @@ enum Capture {
         guard let n = delegate.store.active.first else { return }
         let vm = NoteViewModel(id: n.id, store: delegate.store)
         vm.showFormat = true
-        png(NSHostingView(rootView: NoteView(vm: vm, store: delegate.store).environment(\.colorScheme, .light)), size: NSSize(width: 320, height: 380), to: path)
+        png(NSHostingView(rootView: NoteView(vm: vm, store: delegate.store).environment(\.colorScheme, .dark)), size: NSSize(width: 320, height: 380), to: path)
     }
 
     static func all(_ delegate: AppDelegate, _ path: String) {

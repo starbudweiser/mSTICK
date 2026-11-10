@@ -6,17 +6,22 @@
 
 mSTICK is a personal sticky-notes app for macOS by Starbudweiser, built with Claude Code (Anthropic). It is inspired by Hold My Notes and is not affiliated with its authors. Provided as is, without warranty. MIT License.
 
-Sticky notes tucked at the edge of your screen, encrypted and always within reach.
+Desktop notes you can stack, encrypted and always within reach.
 
 ## Features
 
-- **The deck**: all your notes live in a stack on the screen edge (top, bottom, left or right, on the screen of your choice). At rest, only thin stripes show; move the pointer over them and the notes fan out, one tab per note with its vertical title. Click a tab to open the note.
-- **Floating notes**: title, emoji, five pastel colors plus your own, a font per note, pin, Markdown (bold, italic, underline, strikethrough, headings, bullets, numbered lists, checkboxes, links, tables) styled live as you type.
-- **Archive and search**: archive instead of deleting, search titles and text, multi-select, delete with a 10-second undo.
+- **Notes are real windows** on your desktop: dark by default (or light, or follow the system), a centered title, eight close-button styles (left or right), a color per note plus your own, float on top, glue to the desktop, show on all desktops. Markdown (bold, italic, underline, strikethrough, headings, bullets, numbered lists, checkboxes, links, tables) is styled live as you type.
+- **Stacks**: drop a note onto another and they stack into one draggable unit; click a title bar to open that note; color the stack as a spectrum, unique colors or one color.
+- **Fan** (⌥F): flip through your notes like a deck of cards, arrows or trackpad swipe, ⏎ to open, type to write a new note. **Peek** (⌥`): one key to bring the last note above any app, again to put it away.
+- **Smart Calc**: `price = $129`, `discount = 27%`, `sale price = price - discount` shows `→ $94.17` beside the line; `567+45 =` fills in its result on Return.
+- **Slash commands**: type `/` for a checklist, table, divider, date, reminder, float, glue, color and more (they insert Markdown).
+- **Reminders** in plain language (English, French, Spanish, Italian): `remind me tomorrow at 8pm to pick up lunch`, then Return. The note opens when it is due.
+- **Library and archive**: archive instead of deleting, search titles and text, multi-select, delete with a 10-second undo.
 - **Export and import**: Markdown or plain text (one file per note), a single file, or a re-importable `.stickies` archive. Optional Markdown folder (for example an Obsidian vault) kept in sync.
 - **Encrypted**: notes are encrypted on disk with AES-GCM, the key lives in your Keychain. No account, no server, no telemetry.
 - **Optional sync** between your Macs through a folder (iCloud Drive by default), one `.hmnote` file per note.
-- **Global shortcuts** (no Accessibility permission): new note ⌥⌘N, reopen last ⌥⌘O, all notes ⌥⌘L, archive ⌥⌘A, move the deck ⌥⌘E, hide everything ⌃⌥⌘H. All can be changed.
+- **Global shortcuts** (no Accessibility permission): new note ⌥⌘N, Fan ⌥F, Peek ⌥`, Library ⌥⌘L, hide everything ⌃⌥⌘H. All can be changed.
+- **Light**: no background polling, one timer at most (the next reminder), nothing kept in memory while the Fan is closed.
 - **Automatic updates** from GitHub releases, signature and notarization verified.
 - **Four languages** (French, English, Spanish, Italian), picked from the system language.
 

@@ -7,15 +7,13 @@ if arguments.contains("--selftest") { exit(MainActor.assumeIsolated { SelfTest.r
 let app = NSApplication.shared
 let delegate = MainActor.assumeIsolated { AppDelegate() }
 app.delegate = delegate
-// Pas d'icône dans le Dock : le deck et la barre des menus suffisent. Aucune fenêtre au lancement.
+// Pas d'icône dans le Dock : la barre des menus suffit. Les notes ouvertes sont de simples fenêtres sur le bureau.
 app.setActivationPolicy(.accessory)
 
 /// Essais : rendu hors écran de l'interface (aucune fenêtre ouverte devant le travail en cours).
 let captures: [(String, @MainActor (AppDelegate, String) -> Void)] = [
     ("--capture-note", Capture.note), ("--capture-all", Capture.all),
     ("--capture-settings", { Capture.settings($0, $1, tab: 0) }),
-    ("--capture-deck", { d, p in d.deck.capture(to: p) }),
-    ("--capture-deck-rest", { d, p in d.deck.capture(to: p, fanned: false) }),
     ("--capture-about", { _, p in Capture.about(p) }),
 ]
 if arguments.contains("--demo") { MainActor.assumeIsolated { Capture.seedIfEmpty(delegate.store) } }

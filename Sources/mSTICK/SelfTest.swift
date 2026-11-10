@@ -36,18 +36,20 @@ enum SelfTest {
         tv = editor("# T\n**g**"); tv.fontSize = 14; tv.restyle()
         let heading = tv.textStorage?.attribute(.font, at: 2, effectiveRange: nil) as? NSFont
         check("titre plus grand", (heading?.pointSize ?? 0) > 14 ? "oui" : "non", "oui")
-        // Déplacement du deck : le bord et l'écran visés, y compris sur un second écran (portrait compris).
-        for screen in NSScreen.screens {
-            let f = screen.frame, name = screen.localizedName
-            let cases: [(String, NSPoint, DeckEdge)] = [("droite", NSPoint(x: f.maxX - 1, y: f.midY), .right), ("bas", NSPoint(x: f.midX, y: f.minY + 1), .bottom),
-                                                         ("gauche", NSPoint(x: f.minX + 1, y: f.midY), .left), ("haut", NSPoint(x: f.midX, y: f.maxY - 1), .top)]
-            for (label, point, edge) in cases {
-                let r = DeckTarget.resolve(point)
-                check("cible \(label) de \(name)", "\(r?.screen.displayID ?? 0)/\(r?.edge.rawValue ?? "?")", "\(screen.displayID)/\(edge.rawValue)")
-            }
-            let outside = DeckTarget.resolve(NSPoint(x: f.maxX + 0.5, y: f.midY - 3))
-            check("hors bord de \(name) : écran le plus proche", outside.map { String($0.screen.displayID) } ?? "?", NSScreen.screens.first(where: { $0.frame.contains(NSPoint(x: f.maxX + 0.5, y: f.midY - 3)) }).map { String($0.displayID) } ?? String(screen.displayID))
-        }
+        // Commandes « / »
+        tv = editor("/che"); tv.perform(slash: "checklist", replacing: NSRange(location: 0, length: 4)); check("/checklist", tv.string, "- [ ] ")
+        tv = editor("a /ta"); tv.perform(slash: "table", replacing: NSRange(location: 2, length: 3)); check("/table", tv.string, "a | A | B |\n| --- | --- |\n|  |  |")
+        tv = editor("/di"); tv.perform(slash: "divider", replacing: NSRange(location: 0, length: 3)); check("/divider", tv.string, "---\n")
+        tv = editor("a /ta"); check("plage de complétion", NSStringFromRange(tv.rangeForUserCompletion), "{2, 3}")
+        var idx = 0
+        let list = tv.completions(forPartialWordRange: tv.rangeForUserCompletion, indexOfSelectedItem: &idx) ?? []
+        check("complétion /ta", list.contains("/" + L("slash.table")) && !list.contains("/" + L("slash.heading")) ? "oui" : "non: \(list)", "oui")
+        tv = editor("http://x/y"); check("pas de commande dans une URL", NSStringFromRange(tv.rangeForUserCompletion) == "{2, 0}" ? "faux" : "ok", "ok")
+        let fan = FanModel(); fan.notes = [Note(), Note(), Note()]; fan.move(5); check("Fan : borne haute", String(fan.index), "2"); fan.move(-9); check("Fan : borne basse", String(fan.index), "0")
+        // Smart Calc et rappels au retour chariot
+        tv = editor("567+45 ="); tv.insertNewline(nil); check("calcul inséré", tv.string, "567+45 = 612\n")
+        tv = editor("remind me tomorrow at 8pm to call"); var got: NoteReminder?; tv.onReminder = { got = $0 }; tv.insertNewline(nil)
+        check("rappel créé", got != nil && tv.string.hasPrefix("🔔") && tv.string.hasSuffix("call\n") ? "oui" : "non: \(tv.string)", "oui")
         print(failures == 0 ? "Tous les essais passent." : "\(failures) échec(s).")
         return failures == 0
     }

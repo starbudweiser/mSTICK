@@ -2,18 +2,37 @@ import AppKit
 import SwiftUI
 import mSTICKCore
 
+/// Le texte suit toujours la largeur visible : jamais de défilement horizontal, même si SwiftUI a d'abord proposé une autre taille.
+final class FitScrollView: NSScrollView {
+    override func layout() {
+        super.layout()
+        guard let doc = documentView, abs(doc.frame.width - contentSize.width) > 0.5 else { return }
+        doc.setFrameSize(NSSize(width: contentSize.width, height: doc.frame.height))
+        contentView.scroll(to: .zero)
+        reflectScrolledClipView(contentView)
+    }
+}
+
 /// Pont SwiftUI de l'éditeur : le texte vit dans le magasin, l'éditeur ne le réécrit que si une synchro l'a changé.
 struct NoteEditor: NSViewRepresentable {
     let text: String
     let family: String?
     let size: CGFloat
     let tone: NSColor
+    let accent: NSColor
+    let smartCalc: Bool
+    let slash: Bool
+    let reminders: Bool
     let onChange: (String) -> Void
     let onCancel: () -> Void
+    let onReminder: (NoteReminder) -> Void
+    let onCommand: (String) -> Void
     let ready: (StickTextView) -> Void
 
     func makeNSView(context: Context) -> NSScrollView {
-        let scroll = NSScrollView()
+        let scroll = FitScrollView()
+        scroll.hasHorizontalScroller = false
+        scroll.horizontalScrollElasticity = .none
         scroll.drawsBackground = false
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
@@ -35,9 +54,11 @@ struct NoteEditor: NSViewRepresentable {
         tv.autoresizingMask = [.width]
         tv.textContainer?.containerSize = NSSize(width: 300, height: CGFloat.greatestFiniteMagnitude)
         tv.textContainer?.widthTracksTextView = true
-        tv.insertionPointColor = tone
+        tv.insertionPointColor = accent
         tv.delegate = context.coordinator
         tv.onCancel = onCancel
+        tv.accent = accent; tv.calcEnabled = smartCalc; tv.slashEnabled = slash; tv.remindersEnabled = reminders
+        tv.onReminder = onReminder; tv.onCommand = onCommand
         tv.fontFamily = family; tv.fontSize = size; tv.textTone = tone
         tv.string = text
         tv.restyle()
@@ -51,7 +72,11 @@ struct NoteEditor: NSViewRepresentable {
         guard let tv = context.coordinator.view else { return }
         context.coordinator.parent = self
         tv.onCancel = onCancel
-        tv.insertionPointColor = tone
+        tv.onReminder = onReminder; tv.onCommand = onCommand
+        tv.insertionPointColor = accent
+        tv.slashEnabled = slash; tv.remindersEnabled = reminders
+        if tv.calcEnabled != smartCalc { tv.calcEnabled = smartCalc }
+        if tv.accent != accent { tv.accent = accent }
         if tv.fontFamily != family { tv.fontFamily = family }
         if tv.fontSize != size { tv.fontSize = size }
         if tv.textTone != tone { tv.textTone = tone }
