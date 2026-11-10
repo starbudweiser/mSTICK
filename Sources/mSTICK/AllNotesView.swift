@@ -68,7 +68,8 @@ struct AllNotesView: View {
             Spacer(minLength: 0)
         }
         .contentShape(Rectangle())
-        .onTapGesture(count: 2) { open(note.id) }
+        // Double-clic en parallèle : un onTapGesture(count: 2) placé avant retient le simple clic ~0,5 s.
+        .simultaneousGesture(TapGesture(count: 2).onEnded { open(note.id) })
         .onTapGesture {
             // Le double-clic masquait le simple clic : on sélectionne nous-mêmes (⌘ ajoute ou retire, ⇧ ajoute).
             let mods = NSEvent.modifierFlags
