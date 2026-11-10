@@ -23,6 +23,8 @@
 "all.imported" = "%d nota(s) añadida(s).";
 "all.nomatch" = "Ninguna nota coincide.";
 "all.open" = "Abrir";
+"all.mode.render" = "Vista";
+"all.mode.edit" = "Editar";
 "all.preview.many" = "%d notas seleccionadas";
 "all.preview.none" = "Selecciona una nota para leerla.";
 "all.search" = "Buscar en títulos, textos y emojis";

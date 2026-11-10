@@ -23,6 +23,8 @@
 "all.imported" = "%d note(s) added.";
 "all.nomatch" = "No matching notes.";
 "all.open" = "Open";
+"all.mode.render" = "Preview";
+"all.mode.edit" = "Edit";
 "all.preview.many" = "%d notes selected";
 "all.preview.none" = "Select a note to read it.";
 "all.search" = "Search titles, text and emoji";

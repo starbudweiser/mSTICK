@@ -8,6 +8,7 @@ final class AllNotesModel: ObservableObject {
     @Published var query = ""
     @Published var filter: NoteFilter = .all
     @Published var selection = Set<UUID>()
+    @Published var editing = false
 }
 
 /// « Toutes les notes » (⌥⌘L) et « Archive » (⌥⌘A) : recherche, filtres, sélection multiple, export, suppression.
@@ -17,6 +18,7 @@ struct AllNotesView: View {
     let open: (UUID) -> Void
     @State private var confirmDelete = false
     @State private var message: String?
+    private let prefs = Prefs.shared
 
     private var results: [Note] { store.search(model.query, filter: model.filter) }
     private var chosen: [Note] { results.filter { model.selection.contains($0.id) } }
@@ -107,13 +109,24 @@ struct AllNotesView: View {
                     Text([note.emoji, note.displayTitle(fallback: L("note.untitled"))].filter { !$0.isEmpty }.joined(separator: " "))
                         .socle(Socle.T.heading).foregroundStyle(Socle.C.textStrong)
                     Spacer()
+                    Picker("", selection: $model.editing) {
+                        Text(L("all.mode.render")).tag(false)
+                        Text(L("all.mode.edit")).tag(true)
+                    }.pickerStyle(.segmented).labelsHidden().fixedSize()
                     Button(L("all.open")) { open(note.id) }.buttonStyle(SocleButtonStyle(.primary, height: Socle.M.sizeControl)).fixedSize()
                     Button(L(note.archived ? "note.unarchive" : "note.archive")) { store.setArchived([note.id], !note.archived) }
                         .buttonStyle(SocleButtonStyle(.secondary, height: Socle.M.sizeControl)).fixedSize()
                 }
-                ScrollView {
-                    Text(rendered(note.body)).socle(Socle.T.reading).foregroundStyle(Socle.C.text)
-                        .frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
+                Group {
+                    if model.editing {
+                        NoteEditor(text: note.body, family: note.font ?? (prefs.defaultFont.isEmpty ? nil : prefs.defaultFont), size: CGFloat(prefs.fontSize),
+                                   tone: NSColor.labelColor, accent: NSColor.controlAccentColor, smartCalc: prefs.smartCalc, slash: prefs.slashCommands, reminders: false,
+                                   onChange: { text in store.update(note.id) { $0.body = text } },
+                                   onCancel: { model.editing = false }, onReminder: { _ in }, onCommand: { _ in }, ready: { _ in })
+                            .id(note.id)
+                    } else {
+                        ScrollView { MarkdownPreview(text: note.body).socle(Socle.T.reading).foregroundStyle(Socle.C.text).textSelection(.enabled) }
+                    }
                 }
                 .padding(Socle.M.space3).background(Socle.C.bgSunken).overlay(Rectangle().stroke(Socle.C.border))
             }
@@ -121,10 +134,6 @@ struct AllNotesView: View {
         } else {
             Text(L(chosen.isEmpty ? "all.preview.none" : "all.preview.many", chosen.count)).socle(Socle.T.body).foregroundStyle(Socle.C.textMuted)
         }
-    }
-
-    private func rendered(_ markdown: String) -> AttributedString {
-        (try? AttributedString(markdown: markdown, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(markdown)
     }
 
     // MARK: Actions
