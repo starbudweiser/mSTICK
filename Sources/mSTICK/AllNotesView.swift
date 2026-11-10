@@ -69,6 +69,13 @@ struct AllNotesView: View {
         }
         .contentShape(Rectangle())
         .onTapGesture(count: 2) { open(note.id) }
+        .onTapGesture {
+            // Le double-clic masquait le simple clic : on sélectionne nous-mêmes (⌘ ajoute ou retire, ⇧ ajoute).
+            let mods = NSEvent.modifierFlags
+            if mods.contains(.command) { if model.selection.contains(note.id) { model.selection.remove(note.id) } else { model.selection.insert(note.id) } }
+            else if mods.contains(.shift) { model.selection.insert(note.id) }
+            else { model.selection = [note.id] }
+        }
     }
 
     private var footer: some View {
