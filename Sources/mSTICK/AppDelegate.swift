@@ -162,7 +162,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func statusClicked() {
         guard let button = statusItem?.button else { return }
         let menu = buildMenu()
-        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.isFlipped ? button.bounds.maxY + 4 : -4), in: button)
+        statusItem?.socleShow(menu)   // Socle : menu placé selon l'écran de l'icône (plusieurs écrans)
     }
 
     private func buildMenu() -> NSMenu {
