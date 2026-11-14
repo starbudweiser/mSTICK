@@ -15,3 +15,4 @@ DIST="$DIST" "$NOTARIZE" mSTICK.app
 python3 /Volumes/SKYRIM/TOOLS/MAC/_tools/release_notes.py mSTICK "$VERSION" --sha "$DIST/mSTICK.zip.sha256" -o "$DIST/notes.md"
 gh release create "v$VERSION" "$DIST/mSTICK.zip" "$DIST/mSTICK.zip.sha256" --title "mSTICK $VERSION" --notes-file "$DIST/notes.md"
 rm -rf "$DIST"
+git fetch -q --tags origin || true          # l'étiquette de la publication numérote ensuite les builds locaux (build_app.sh)
