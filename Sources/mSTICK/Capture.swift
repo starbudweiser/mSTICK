@@ -8,12 +8,12 @@ enum Capture {
     static func seedIfEmpty(_ store: NoteStore) {
         guard store.notes.isEmpty else { return }
         let samples: [(String, String, String, String)] = [
-            ("Courses", "🛒", "yellow", "# Marché\n- [ ] pommes\n- [x] 4 bananes\n- [ ] fruits secs\n\nPenser à **appeler** Léa ~~lundi~~ mardi.\nhttps://holdmynotes.app\n\n| Fruit | Qté |\n| --- | --- |\n| Pomme | 3 |"),
-            ("Bureau", "💼", "blue", "1. Relire le devis\n2. Envoyer la *facture*\n3. <u>Sauvegarder</u> `projet`"),
-            ("Idées", "💡", "green", "Une app qui **vit** au bord de l'écran."),
-            ("Perso", "", "pink", "Anniversaire de Marie le 14."),
+            ("Groceries", "🛒", "yellow", "# Market\n- [ ] apples\n- [x] 4 bananas\n- [ ] dried fruit\n\nRemember to **call** Lea ~~Monday~~ Tuesday.\nhttps://example.com\n\n| Fruit | Qty |\n| --- | --- |\n| Apple | 3 |"),
+            ("Work", "💼", "blue", "1. Review the quote\n2. Send the *invoice*\n3. Back up the **project**"),
+            ("Ideas", "💡", "green", "An app that **lives** at the edge of the screen."),
+            ("Personal", "", "pink", "Marie's birthday on the 14th."),
             ("Budget", "", "orange", "price = $129\ndiscount = 27%\nsale price = price - discount\n\n567+45 =\n🔔 tomorrow · 8:00 PM · pick up lunch"),
-            ("Projets", "🚀", "purple", "## À lancer\n- [ ] page d'accueil\n- [x] logo\n\nVoir [la doc](https://example.com) et noter `swift build`."),
+            ("Projects", "🚀", "purple", "## To launch\n- [ ] landing page\n- [x] logo\n\nSee [the docs](https://example.com) and note `swift build`."),
         ]
         for (i, s) in samples.enumerated() {
             let n = store.create(color: s.2)
