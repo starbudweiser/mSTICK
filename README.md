@@ -8,6 +8,8 @@ mSTICK is made by Starbudweiser & Claude Code (Anthropic). Part of the **DESKTOP
 
 Desktop notes you can stack, encrypted and always within reach.
 
+![Several mSTICK sticky notes on the desktop, including a stacked group, showing checklists, Markdown, Smart Calc and a reminder.](docs/screenshot.png)
+
 ## Features
 
 - **Notes are real windows** on your desktop: dark by default (or light, or follow the system), a centered title, eight close-button styles (left or right), a color per note plus your own, float on top, glue to the desktop, show on all desktops. Markdown (bold, italic, underline, strikethrough, headings, bullets, numbered lists, checkboxes, links, tables) is styled live as you type.
