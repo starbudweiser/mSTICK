@@ -2,6 +2,10 @@
 
 [English](README.md)
 
+## À propos
+
+mSTICK est réalisée par Starbudweiser & Claude Code (Anthropic). Fait partie du **DESKTOP MAC TOOLKIT**. Licence MIT, © 2026 Starbudweiser. Fournie telle quelle, sans garantie. « À propos de mSTICK » est dans le menu de l'appli.
+
 Notes de bureau empilables, chiffrées et toujours à portée de main. Version personnelle inspirée de Hold My Notes (sans lien avec ses auteurs).
 
 - **Des notes qui sont de vraies fenêtres** sur le bureau : sombres par défaut (ou claires, ou celles du système), titre centré, huit croix de fermeture (à gauche ou à droite), une couleur par note plus les vôtres, flotter dessus, coller au bureau, tous les bureaux. Markdown mis en forme en direct.
@@ -15,5 +19,7 @@ Notes de bureau empilables, chiffrées et toujours à portée de main. Version p
 - **Chiffrement** AES-GCM, clé dans le Trousseau. Aucun compte, aucun serveur, aucune télémétrie.
 - **Synchronisation** facultative entre Mac par un dossier (iCloud Drive par défaut).
 - **Raccourcis globaux** modifiables (nouvelle note ⌥⌘N, Fan ⌥F, Peek ⌥`, Bibliothèque ⌥⌘L), mise à jour automatique, quatre langues.
+
+Configuration requise : macOS 14 ou plus, Apple Silicon. Installation : télécharger `mSTICK.zip` depuis la page Releases, le dézipper et déplacer mSTICK.app dans Applications (signée, notarisée, mise à jour automatique).
 
 Compilation : `./build_app.sh` (installe dans `~/Applications/Applications Personnelles`). Tests : `swift test`, `mSTICK --selftest`.

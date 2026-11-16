@@ -4,7 +4,7 @@
 
 ## About
 
-mSTICK is a personal sticky-notes app for macOS by Starbudweiser, built with Claude Code (Anthropic). It is inspired by Hold My Notes and is not affiliated with its authors. Provided as is, without warranty. MIT License.
+mSTICK is made by Starbudweiser & Claude Code (Anthropic). Part of the **DESKTOP MAC TOOLKIT**. MIT License, © 2026 Starbudweiser. Provided as is, without warranty. "About mSTICK" is in the app menu. It is inspired by Hold My Notes and is not affiliated with its authors.
 
 Desktop notes you can stack, encrypted and always within reach.
 
@@ -24,6 +24,10 @@ Desktop notes you can stack, encrypted and always within reach.
 - **Light**: no background polling, one timer at most (the next reminder), nothing kept in memory while the Fan is closed.
 - **Automatic updates** from GitHub releases, signature and notarization verified.
 - **Four languages** (French, English, Spanish, Italian), picked from the system language.
+
+## Requirements and installation
+
+macOS 14 or later, Apple Silicon. Download the latest `mSTICK.zip` from the Releases page, unzip it and move mSTICK.app to Applications. The app is signed and notarized and updates itself from GitHub releases.
 
 ## Build
 
