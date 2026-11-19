@@ -171,3 +171,12 @@
 "update.check" = "Check for updates…";
 "update.install" = "Install version %@…";
 "update.installing" = "Updating…";
+"menu.edit" = "Edit";
+"menu.undo" = "Undo";
+"menu.redo" = "Redo";
+"menu.cut" = "Cut";
+"menu.copy" = "Copy";
+"menu.paste" = "Paste";
+"menu.selectAll" = "Select All";
+"menu.window" = "Window";
+"menu.close" = "Close";

@@ -171,3 +171,12 @@
 "update.check" = "Buscar actualizaciones…";
 "update.install" = "Instalar la versión %@…";
 "update.installing" = "Actualizando…";
+"menu.edit" = "Edición";
+"menu.undo" = "Deshacer";
+"menu.redo" = "Rehacer";
+"menu.cut" = "Cortar";
+"menu.copy" = "Copiar";
+"menu.paste" = "Pegar";
+"menu.selectAll" = "Seleccionar todo";
+"menu.window" = "Ventana";
+"menu.close" = "Cerrar";
