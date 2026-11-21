@@ -41,3 +41,9 @@ swift test          # unit tests
 ```
 
 `NO_INSTALL=1 ./build_app.sh` builds `./mSTICK.app` without installing it. `mSTICK --selftest` checks the editor without opening any window. Notes are stored in `~/Library/Application Support/mSTICK` (`MSTICK_DATA_DIR` to change it).
+
+## Support / Soutenir
+
+This app is free. If it is useful to you, you can support the project (optional, no reward expected): [GitHub Sponsors](https://github.com/sponsors/starbudweiser).
+
+Cette appli est gratuite. Si elle vous est utile, vous pouvez soutenir le projet (facultatif, sans contrepartie) : [GitHub Sponsors](https://github.com/sponsors/starbudweiser).
